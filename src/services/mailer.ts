@@ -27,7 +27,24 @@ const mailer = Mailer({
   NewStructureNotification: NewStructureEmail,
 })
 
-export const sendContactEmail = async (contact: ContactFields) => mailer.send('ContactEmail', contact, { to: 'contact@resap.fr' })
+export const sendContactEmail = async (contact: ContactFields) => {
+  // Honeypot check: if the hidden field has a value, it's a bot
+  if (contact.website) {
+    throw new Error('Bot detected.')
+  }
+
+  // Validate submission time: reject if submitted in less than 10 seconds
+  if (contact.formLoadedAt) {
+    const submissionTime = Date.now() - contact.formLoadedAt
+    const MINIMUM_SUBMISSION_TIME = 10
+
+    if (submissionTime < MINIMUM_SUBMISSION_TIME) {
+      throw new Error('Bot detected.')
+    }
+  }
+
+  return mailer.send('ContactEmail', contact, { to: 'contact@resap.fr' })
+}
 
 export const sendNewStructureNotification = async (data: NewStructureEmailParams) => {
   mailer.send('NewStructureNotification', data, {

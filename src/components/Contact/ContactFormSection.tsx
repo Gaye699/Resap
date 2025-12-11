@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { sendContactEmail } from '@/services/mailer'
@@ -17,14 +18,21 @@ export type ContactFields = {
   phone: string,
   email: string,
   organization: string,
+  website?: string, // honeypot field
+  formLoadedAt?: number, // timestamp when form was loaded
 }
 
 const Form = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<ContactFields>()
+  const [formLoadedAt] = useState(() => Math.floor(Date.now() / 1000))
 
   const onSubmit = async (contact: ContactFields) => {
     try {
-      await sendContactEmail(contact)
+      // Send the form load timestamp to the server for validation
+      await sendContactEmail({
+        ...contact,
+        formLoadedAt,
+      })
       reset()
       toast.success(
         'Votre message a été envoyé. \n\nNous reviendrons vers vous dans les plus brefs délais.',
@@ -38,6 +46,17 @@ const Form = () => {
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 gap-y-6 sm:grid-cols-6 sm:gap-x-8">
+      {/* Honeypot field - hidden with CSS to prevent bot detection */}
+      <input
+        type="text"
+        {...register('website')}
+        tabIndex={-1}
+        autoComplete="off"
+        placeholder="Website"
+        className="absolute -left-[9999px] opacity-0 pointer-events-none"
+        aria-hidden="true"
+      />
+
       <FormField className="sm:col-span-6" name="message" required error={errors.message && 'Le champ est requis.'} label="Message">
         <FormTextarea
           id="message"
