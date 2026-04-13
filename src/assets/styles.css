@@ -31,3 +31,33 @@ html, body, #__next {
 .leaflet-bar {
   @apply print:hidden;
 }
+
+/* Styles Tiptap dans l'InspectorPanel */
+.ProseMirror {
+  outline: none;
+  min-height: 200px;
+  padding: 16px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+.ProseMirror h2 { font-size: 1.25rem; font-weight: 600; margin: 0.875rem 0 0.5rem; }
+.ProseMirror h3 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+.ProseMirror ul { list-style: disc; padding-left: 1.5rem; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.5rem; }
+.ProseMirror blockquote {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  margin: 1rem 0;
+}
+.ProseMirror img { max-width: 100%; border-radius: 6px; margin: 0.5rem 0; }
+.ProseMirror a { color: #2563eb; text-decoration: underline; }
+.ProseMirror hr { border: none; border-top: 2px solid #e5e7eb; margin: 1.5rem 0; }
