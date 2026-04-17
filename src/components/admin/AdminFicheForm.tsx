@@ -1,6 +1,6 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,6 +8,8 @@ import { PrimaryButton } from '@/components/Buttons'
 import { useState } from 'react'
 import { AssetPicker } from '@/components/admin/editor/AssetPicker'
 import { setFicheIllustration } from '@/services/contentful-management'
+import { LiensPicker } from '@/components/admin/editor/LiensPicker'
+import { QuickLienCreator } from '@/components/admin/QuickLienCreator'
 
 // Tous les types de dispositif extraits de contentful.d.ts
 const TYPES_DISPOSITIF = [
@@ -55,6 +57,9 @@ export type AdminFicheFields = {
   resume: string
   contenu: string
   typeDispositif: string[]
+  outilsIds: string[]
+  patientIds: string[]
+  pourEnsavoirPlusIds: string[]
 }
 
 type Props = {
@@ -81,6 +86,7 @@ export const AdminFicheForm = ({
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<AdminFicheFields>({ defaultValues })
 
@@ -385,6 +391,84 @@ export const AdminFicheForm = ({
         {errors.typeDispositif && (
           <p className="text-red-500 text-xs mt-2">Sélectionnez au moins un type.</p>
         )}
+      </section>
+
+      {/* ── Section : Liens associés ── */}
+      <section className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Liens associés</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Ces liens s&apos;affichent dans la colonne latérale de la fiche sur le site public.
+          </p>
+        </div>
+
+        <div className="divide-y divide-gray-100">
+          {/* Bloc : Pour aller plus loin */}
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Pour aller plus loin</p>
+                <p className="text-xs text-gray-400">Ressources complémentaires</p>
+              </div>
+            </div>
+            <Controller
+              name="pourEnSavoirPlusIds"
+              control={control}
+              defaultValue={[]}
+              render={({ field }) => (
+                <LiensPicker
+                  titre="Pour aller plus loin"
+                  selectedIds={field.value ?? []}
+                  onChange={field.onChange}
+                  ficheId={ficheId}
+                  bloc="pourEnSavoirPlus"
+                />
+              )}
+            />
+          </div>
+
+          {/* Bloc : Quelques outils */}
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-gray-800">Quelques outils</p>
+            </div>
+            <Controller
+              name="outilsIds"
+              control={control}
+              defaultValue={[]}
+              render={({ field }) => (
+                <LiensPicker
+                  titre="Quelques outils"
+                  selectedIds={field.value ?? []}
+                  onChange={field.onChange}
+                  ficheId={ficheId}
+                  bloc="outils"
+                />
+              )}
+            />
+          </div>
+
+          {/* Bloc : Pour les patients */}
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-gray-800">Pour les patients</p>
+            </div>
+            <Controller
+              name="patientsIds"
+              control={control}
+              defaultValue={[]}
+              render={({ field }) => (
+                <LiensPicker
+                  titre="Pour les patients"
+                  selectedIds={field.value ?? []}
+                  onChange={field.onChange}
+                  ficheId={ficheId}
+                  bloc="patients"
+                />
+              )}
+            />
+          </div>
+        </div>
       </section>
 
       {/* ── Boutons d'action ── */}

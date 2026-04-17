@@ -1,192 +1,246 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { listLiens } from '@/services/contentful-management'
+import { listLiens, createLienAndLinkToFiche } from '@/services/contentful-management'
+import toast from 'react-hot-toast'
 
-type LienItem = { id: string; titre: string; url?: string; hasFichier: boolean; statut: string }
-
-type Props = {
-  // Titre du bloc (ex: "Quelques outils")
+type LienItem = {
+  id: string
   titre: string
-  // IDs des liens actuellement sélectionnés
-  selectedIds: string[]
-  // Appelé quand la sélection change
-  onChange: (ids: string[]) => void
+  url?: string
+  hasFichier: boolean
+  statut: string
 }
 
-export function LiensPicker({ titre, selectedIds, onChange }: Props) {
-  const [liens, setLiens] = useState<LienItem[]>([])
+type Props = {
+  titre: string
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+  // Si ficheId + bloc sont fournis → permet la création rapide
+  ficheId?: string
+  bloc?: 'outils' | 'patients' | 'pourEnSavoirPlus'
+}
+
+export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Props) {
+  const [allLiens, setAllLiens] = useState<LienItem[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [isOpen, setIsOpen] = useState(false)
+  // Mode création rapide
+  const [showCreate, setShowCreate] = useState(false)
+  const [newTitre, setNewTitre] = useState('')
+  const [newUrl, setNewUrl] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const load = async () => {
-    if (liens.length > 0) return // déjà chargé
+    if (allLiens.length > 0) return
     setLoading(true)
     try {
-      setLiens(await listLiens())
+      setAllLiens(await listLiens())
     } finally {
       setLoading(false)
     }
   }
 
+  const handleOpen = () => {
+    setIsOpen(true)
+    load()
+  }
+
   const toggle = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onChange(selectedIds.filter((i) => i !== id))
-    } else {
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter((i) => i !== id)
+        : [...selectedIds, id],
+    )
+  }
+
+  // Création rapide d'un nouveau lien depuis le formulaire fiche
+  const handleCreateLien = async () => {
+    if (!newTitre.trim()) return
+    if (!ficheId || !bloc) {
+      // Sans ficheId, on crée juste le lien et on l'ajoute à la sélection
+      toast.error('Sauvegardez la fiche d\'abord pour créer des liens.')
+      return
+    }
+
+    setCreating(true)
+    try {
+      const { id } = await createLienAndLinkToFiche(ficheId, bloc, {
+        titre: newTitre.trim(),
+        url: newUrl.trim() || undefined,
+      })
+      // Ajoute le nouveau lien à la sélection locale
       onChange([...selectedIds, id])
+      // Rafraîchit la liste
+      const updated = await listLiens()
+      setAllLiens(updated)
+      setNewTitre('')
+      setNewUrl('')
+      setShowCreate(false)
+      toast.success('Lien créé et associé à la fiche.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur lors de la création du lien.')
+    } finally {
+      setCreating(false)
     }
   }
 
-  const filteredLiens = liens.filter((l) =>
+  const filteredLiens = allLiens.filter((l) =>
     l.titre.toLowerCase().includes(search.toLowerCase()),
   )
 
-  return (
-    <div style={{ marginBottom: 8 }}>
-      {/* En-tête du bloc avec bouton toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', margin: 0 }}>{titre}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, color: '#9ca3af' }}>
-            {selectedIds.length} lien{selectedIds.length > 1 ? 's' : ''}
-          </span>
-          <button
-            type="button"
-            onClick={() => { setIsOpen(!isOpen); if (!isOpen) load() }}
-            style={{
-              fontSize: 11,
-              padding: '3px 8px',
-              borderRadius: 5,
-              border: '1px solid #e5e7eb',
-              background: isOpen ? '#eff6ff' : 'white',
-              color: isOpen ? '#2563eb' : '#6b7280',
-              cursor: 'pointer',
-            }}
-          >
-            {isOpen ? '▲ Fermer' : '✏️ Modifier'}
-          </button>
-        </div>
-      </div>
+  // Labels des liens sélectionnés pour l'affichage
+  const selectedLiens = selectedIds
+    .map((id) => allLiens.find((l) => l.id === id))
+    .filter(Boolean) as LienItem[]
 
-      {/* Liens sélectionnés (toujours visibles) */}
+  return (
+    <div>
+      {/* Liens actuellement sélectionnés */}
       {selectedIds.length > 0 && (
-        <div style={{ marginBottom: 6 }}>
-          {selectedIds.map((id) => {
-            const lien = liens.find((l) => l.id === id)
-            if (!lien) return null
-            return (
-              <div key={id}
-              style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '4px 8px',
-                background: '#eff6ff',
-                borderRadius: 6,
-                marginBottom: 3,
-                fontSize: 12,
-              }}
-              >
-                <span style={{ color: '#1d4ed8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                  {lien.hasFichier ? '📎' : '🔗'} {lien.titre}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => toggle(id)}
-                  style={{ background: 'none', border: 'none', color: '#93c5fd', cursor: 'pointer', fontSize: 13, padding: '0 0 0 6px', flexShrink: 0 }}
-                >
-                  ✕
-                </button>
+        <div className="space-y-1.5 mb-3">
+          {selectedLiens.map((lien) => (
+            <div
+              key={lien.id}
+              className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-3 py-2"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm">{lien.hasFichier ? '📎' : '🔗'}</span>
+                <span className="text-sm text-blue-800 font-medium truncate">{lien.titre}</span>
+                {lien.url && (
+                  <span className="text-xs text-blue-400 truncate hidden sm:block">{lien.url}</span>
+                )}
               </div>
-            )
-          })}
+              <button
+                type="button"
+                onClick={() => toggle(lien.id)}
+                className="text-blue-300 hover:text-blue-600 text-sm ml-2 flex-shrink-0"
+                title="Retirer ce lien"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Picker ouvert */}
-      {isOpen && (
-        <div style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          overflow: 'hidden',
-          background: 'white',
-        }}
+      {/* Boutons d'action */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
         >
+          + Sélectionner un lien existant
+        </button>
+        {ficheId && bloc && (
+          <button
+            type="button"
+            onClick={() => setShowCreate(!showCreate)}
+            className="text-xs px-3 py-1.5 border border-blue-200 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+          >
+            + Créer un nouveau lien
+          </button>
+        )}
+      </div>
+
+      {/* Formulaire de création rapide */}
+      {showCreate && (
+        <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-blue-800">Nouveau lien — {titre}</p>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Titre <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newTitre}
+              onChange={(e) => setNewTitre(e.target.value)}
+              placeholder="Ex : Guide AME 2024"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">URL (optionnel)</label>
+            <input
+              type="url"
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              placeholder="https://..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCreateLien}
+              disabled={!newTitre.trim() || creating}
+              className="text-xs px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 hover:bg-blue-700 transition-colors"
+            >
+              {creating ? 'Création...' : 'Créer et associer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowCreate(false); setNewTitre(''); setNewUrl('') }}
+              className="text-xs px-3 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Picker liens existants */}
+      {isOpen && (
+        <div className="mt-3 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
           {/* Recherche */}
-          <div style={{ padding: 8, borderBottom: '1px solid #f3f4f6' }}>
+          <div className="p-3 border-b border-gray-100">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un lien..."
-              style={{
-                width: '100%',
-                border: '1px solid #e5e7eb',
-                borderRadius: 6,
-                padding: '5px 8px',
-                fontSize: 12,
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
           </div>
 
           {/* Liste */}
-          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+          <div className="max-h-56 overflow-y-auto">
             {loading && (
-              <p style={{ padding: 12, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
-                Chargement...
-              </p>
+              <p className="p-4 text-center text-xs text-gray-400">Chargement...</p>
             )}
             {!loading && filteredLiens.length === 0 && (
-              <p style={{ padding: 12, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
-                Aucun lien trouvé
-              </p>
+              <p className="p-4 text-center text-xs text-gray-400">Aucun lien trouvé.</p>
             )}
             {filteredLiens.map((lien) => {
               const isSelected = selectedIds.includes(lien.id)
               return (
                 <label
                   key={lien.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '7px 10px',
-                    cursor: 'pointer',
-                    background: isSelected ? '#eff6ff' : 'transparent',
-                    transition: 'background 0.1s',
-                    borderBottom: '1px solid #f9fafb',
-                  }}
-                  onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#f9fafb' }}
-                  onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+                  className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer border-b border-gray-50 last:border-0 transition-colors ${
+                    isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(lien.id)}
-                    style={{ width: 14, height: 14, flexShrink: 0 }}
+                    className="w-4 h-4 rounded border-gray-300"
                   />
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
                       {lien.hasFichier ? '📎' : '🔗'} {lien.titre}
                     </p>
                     {lien.url && (
-                      <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {lien.url}
-                      </p>
+                      <p className="text-xs text-gray-400 truncate">{lien.url}</p>
                     )}
                   </div>
-                  <span style={{
-                    fontSize: 10,
-                    padding: '1px 6px',
-                    borderRadius: 20,
-                    background: lien.statut === 'published' ? '#dcfce7' : '#fef9c3',
-                    color: lien.statut === 'published' ? '#166534' : '#854d0e',
-                    flexShrink: 0,
-                  }}
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                    lien.statut === 'published'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}
                   >
                     {lien.statut === 'published' ? 'Publié' : 'Draft'}
                   </span>
@@ -196,21 +250,16 @@ export function LiensPicker({ titre, selectedIds, onChange }: Props) {
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '6px 10px', borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
+          <div className="p-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-400">
+              {selectedIds.length} sélectionné{selectedIds.length > 1 ? 's' : ''}
+            </span>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              style={{
-                fontSize: 11,
-                padding: '4px 12px',
-                borderRadius: 5,
-                border: '1px solid #e5e7eb',
-                background: '#f9fafb',
-                color: '#374151',
-                cursor: 'pointer',
-              }}
+              className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Fermer
+              Confirmer
             </button>
           </div>
         </div>

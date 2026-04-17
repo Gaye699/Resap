@@ -29,6 +29,7 @@ type Props = {
   defaultValues?: Partial<AdminStructureFields>
   onSave: (data: AdminStructureFields) => Promise<void>
   onPublish?: () => Promise<void>
+  publishLabel?: string
   backHref?: string
 }
 
@@ -70,6 +71,10 @@ export const AdminStructureForm = ({
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la publication.')
     }
   }
+
+  const publishLabel = defaultValues?.nom && (defaultValues as any).statut === 'published'
+    ? 'Dépublier'
+    : 'Publier sur le site'
 
   return (
     <form noValidate onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -216,9 +221,13 @@ export const AdminStructureForm = ({
           <button
             type="button"
             onClick={handlePublishClick}
-            className="px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+            className={`px-5 py-2.5 text-white text-sm font-medium rounded-md transition-colors ${
+              publishLabel === 'Dépublier'
+                ? 'bg-orange-500 hover:bg-orange-600'
+                : 'bg-green-600 hover:bg-green-700'
+              }`}
           >
-            Publier sur le site
+            {publishLabel ?? 'Publier sur le site'}
           </button>
         )}
 

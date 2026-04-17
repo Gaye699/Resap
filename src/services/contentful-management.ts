@@ -321,6 +321,50 @@ export const publishLien = async (id: string): Promise<void> => {
   await entry.publish()
 }
 
+// Liens intégrés à une fiche
+export const createLienAndLinkToFiche = async (
+  ficheId: string,
+  bloc: 'outils' | 'patients' | 'pourEnSavoirPlus',
+  lienData: CreateLienData,
+): Promise<{ id: string }> => {
+  const environment = await getEnvironment()
+
+  // 1. Créer le lien
+  const lienEntry = await environment.createEntry('lien', {
+    fields: {
+      titre: { fr: lienData.titre },
+      ...(lienData.url ? { url: { fr: lienData.url } } : {}),
+    },
+  })
+
+  // 2. Lire la fiche courante
+  const ficheEntry = await environment.getEntry(ficheId)
+
+  // Nom du champ Contentful selon le bloc
+  const fieldMap = {
+    outils: 'outils',
+    patients: 'patients',
+    pourEnSavoirPlus: 'pourEnSavoirPlus',
+  }
+  const fieldName = fieldMap[bloc]
+
+  // 3. Récupérer la liste existante (peut être undefined)
+  const existing = (ficheEntry.fields[fieldName] as { fr: any[] } | undefined)?.fr ?? []
+
+  // 4. Ajouter le nouveau lien à la liste
+  ficheEntry.fields[fieldName] = {
+    fr: [
+      ...existing,
+      { sys: { type: 'Link', linkType: 'Entry', id: lienEntry.sys.id } },
+    ],
+  }
+
+  // 5. Sauvegarder la fiche
+  await ficheEntry.update()
+
+  return { id: lienEntry.sys.id }
+}
+
 // ─── FICHES ────────────────────────────────────────────────────────────────
 
 export const listFiches = async () => {
