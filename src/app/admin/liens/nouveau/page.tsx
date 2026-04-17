@@ -73,19 +73,22 @@ export default function NouveauLienPage() {
 
           {/* Choix exclusif URL ou Fichier */}
           <div>
-            <p className="block text-sm font-medium text-gray-700 mb-3">
-              Type de lien <span className="text-red-500">*</span>
+            <p className="text-sm font-medium text-gray-700 mb-2">
+              Type de contenu <span className="text-red-500">*</span>
             </p>
-            <div className="flex gap-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 text-xs text-amber-700">
+              ⚠️ Si vous renseignez les deux (URL et fichier), <strong>le fichier sera prioritaire</strong> sur l&apos;URL.
+              Préférez ne remplir qu&apos;un seul des deux champs.
+            </div>
+            <div className="flex gap-6 mb-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   value="url"
                   checked={typeLien === 'url'}
                   onChange={() => setTypeLien('url')}
-                  className="text-blue-600"
                 />
-                <span className="text-sm text-gray-700">Lien URL externe</span>
+                <span className="text-sm text-gray-700">🔗 Lien URL externe</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -93,14 +96,10 @@ export default function NouveauLienPage() {
                   value="fichier"
                   checked={typeLien === 'fichier'}
                   onChange={() => setTypeLien('fichier')}
-                  className="text-blue-600"
                 />
-                <span className="text-sm text-gray-700">Fichier PDF / document</span>
+                <span className="text-sm text-gray-700">📎 Fichier (PDF, doc...)</span>
               </label>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Un seul type possible — URL ou fichier, jamais les deux.
-            </p>
           </div>
 
           {/* Champ URL — affiché seulement si typeLien === 'url' */}

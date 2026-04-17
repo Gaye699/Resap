@@ -11,7 +11,13 @@ type Props = {
 
 export function EditStructureForm({ id, defaultValues, isPublished: _isPublished }: Props) {
   const handleSave = async (data: AdminStructureFields) => {
-    await updateStructureInContentful(id, data)
+    await updateStructureInContentful(id, {
+      ...data,
+      specialites: data.specialites
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+    })
   }
 
   const handlePublish = async () => {

@@ -23,7 +23,7 @@ export type FieldDefinition = {
   // Label affiché dans le panneau (ex: 'Titre de la fiche')
   label: string
   // Type de champ → détermine quel composant afficher dans InspectorPanel
-  type: 'text' | 'textarea' | 'markdown' | 'select' | 'checkboxGroup' | 'image'
+  type: 'text' | 'textarea' | 'markdown' | 'select' | 'checkboxGroup' | 'image' | 'liens'
   // Options pour 'select' et 'checkboxGroup'
   options?: { value: string; label: string }[]
   // Contraintes

@@ -43,7 +43,7 @@ export default function AdminStructuresPage() {
   const {
     search, setSearch,
     filters, setFilter,
-    sortKey, sortDir, toggleSort,
+    sortKey, sortDir, toggleSort, setSort,
     filtered,
     paginated,
     page,
@@ -179,6 +179,27 @@ export default function AdminStructuresPage() {
           ))}
         </select>
 
+        <select
+          value={String(sortKey) ?? 'updatedAt'}
+          onChange={(e) => setSort(e.target.value as keyof Structure, sortDir)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
+        >
+          <option value="updatedAt">Tri: Dernière modification</option>
+          <option value="nom">Tri: Nom</option>
+          <option value="type">Tri: Type</option>
+          <option value="adresse">Tri: Adresse</option>
+          <option value="statut">Tri: Statut</option>
+        </select>
+
+        <select
+          value={sortDir}
+          onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Structure, e.target.value as 'asc' | 'desc')}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
+        >
+          <option value="desc">Ordre: décroissant</option>
+          <option value="asc">Ordre: croissant</option>
+        </select>
+
         {/* Reset */}
         {(search || Object.values(filters).some(Boolean)) && (
           <button
@@ -294,14 +315,9 @@ export default function AdminStructuresPage() {
                 <td className="px-4 py-3 text-right">
                   <ActionMenu actions={[
                     {
-                      label: 'Éditeur visuel',
+                      label: 'Modifier',
                       icon: '✏️',
                       onClick: () => router.push(`/admin/structures/${s.id}/editor`),
-                    },
-                    {
-                      label: 'Modifier (formulaire)',
-                      icon: '📝',
-                      onClick: () => router.push(`/admin/structures/${s.id}/modifier`),
                     },
                     {
                       label: s.statut === 'published' ? 'Dépublier' : 'Publier',

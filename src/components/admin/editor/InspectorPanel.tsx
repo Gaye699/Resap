@@ -6,6 +6,7 @@ import { TextareaField } from './fields/TextareaField'
 import { SelectField } from './fields/SelectField'
 import { CheckboxGroupField } from './fields/CheckboxGroupField'
 import { RichTextEditor } from './RichTextEditor'
+import { LiensPicker } from './LiensPicker'
 
 export function InspectorPanel() {
   const { selectedField, values, updateValue, clearSelection } = useEditor()
@@ -95,6 +96,14 @@ export function InspectorPanel() {
           <p className="text-xs text-gray-400 mt-3 leading-relaxed">
             💡 {selectedField.hint}
           </p>
+        )}
+
+        {selectedField.type === 'liens' && (
+          <LiensPicker
+            titre={selectedField.label}
+            selectedIds={value ?? []}
+            onChange={handleChange}
+          />
         )}
       </div>
     </div>

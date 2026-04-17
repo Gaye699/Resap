@@ -14,6 +14,7 @@ export type CreateStructureData = {
   organisation: string
   type: string
   description: string
+  specialites?: string[]
   adresse: string
   siteWeb: string
   email: string
@@ -64,6 +65,12 @@ export const createStructureInContentful = async (data: CreateStructureData): Pr
       },
       organisation: data.organisation ? {
         fr: data.organisation,
+      } : undefined,
+      specialites: data.specialites?.length ? {
+        fr: data.specialites,
+      } : undefined,
+      description: data.description ? {
+        fr: await richTextFromMarkdown(data.description),
       } : undefined,
       type: {
         fr: data.type,
@@ -150,6 +157,18 @@ export const getStructureById = async (id: string) => {
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
 
+  // Extrait le texte brut du rich text description
+  const extractText = (doc: any): string => {
+    if (!doc?.content) return ''
+    const extract = (nodes: any[]): string =>
+      nodes.flatMap((n: any) => {
+        if (n.nodeType === 'text') return [n.value ?? '']
+        if (n.content) return extract(n.content)
+        return []
+      }).join('\n')
+    return extract(doc.content)
+  }
+
   return {
     id: entry.sys.id,
     nom: (entry.fields.nom as { fr: string })?.fr ?? '',
@@ -159,7 +178,8 @@ export const getStructureById = async (id: string) => {
     email: (entry.fields.email as { fr: string } | undefined)?.fr ?? '',
     tel: (entry.fields.tel as { fr: string } | undefined)?.fr ?? '',
     siteWeb: (entry.fields.siteWeb as { fr: string } | undefined)?.fr ?? '',
-    description: (entry.fields.description as { fr: string } | undefined)?.fr ?? '',
+    description: extractText((entry.fields.description as { fr: any } | undefined)?.fr),
+    specialites: (entry.fields.specialites as { fr: string[] } | undefined)?.fr ?? [],
     statut: entry.sys.publishedAt ? 'published' : 'draft' as const,
   }
 }
@@ -172,22 +192,33 @@ export const updateStructureInContentful = async (
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
 
-  // On ne modifie que les champs fournis (Partial = tout est optionnel)
   if (data.nom !== undefined) entry.fields.nom = { fr: data.nom }
-  if (data.organisation !== undefined) entry.fields.organisation = { fr: data.organisation }
+  if (data.organisation !== undefined) {
+    entry.fields.organisation = data.organisation ? { fr: data.organisation } : undefined
+  }
   if (data.type !== undefined) entry.fields.type = { fr: data.type }
-  if (data.description !== undefined) entry.fields.description = { fr: data.description }
-  if (data.siteWeb !== undefined) entry.fields.siteWeb = { fr: data.siteWeb }
-  if (data.email !== undefined) entry.fields.email = { fr: data.email }
-  if (data.tel !== undefined) entry.fields.tel = { fr: data.tel }
+  if (data.specialites !== undefined) {
+    entry.fields.specialites = { fr: data.specialites }
+  }
+  if (data.siteWeb !== undefined) entry.fields.siteWeb = data.siteWeb ? { fr: data.siteWeb } : undefined
+  if (data.email !== undefined) entry.fields.email = data.email ? { fr: data.email } : undefined
+  if (data.tel !== undefined) entry.fields.tel = data.tel ? { fr: data.tel } : undefined
+
+  // Description = rich text
+  if (data.description !== undefined) {
+    entry.fields.description = data.description
+      ? { fr: await richTextFromMarkdown(data.description) }
+      : undefined
+  }
+
+  // Adresse : une seule saisie → remplit les 2 champs Contentful
   if (data.adresse !== undefined) {
     entry.fields.adresse = { fr: data.adresse }
-    // Recalcule les coordonnées GPS si l'adresse change
     const { lat, lon } = await findCoordinates(data.adresse)
     entry.fields.latLon = { fr: { lat, lon } }
   }
 
-  await entry.update() // sauvegarde en brouillon
+  await entry.update()
 }
 
 // Publie une structure → visible sur le site public
@@ -465,4 +496,93 @@ export const getStructuresByTypes = async (types: string[]) => {
     tel: (entry.fields.tel as { fr: string } | undefined)?.fr,
     latLon: (entry.fields.latLon as { fr: { lat: number; lon: number } } | undefined)?.fr,
   }))
+}
+
+// ─── ASSETS (illustrations, PDFs) ─────────────────────────────────────────
+
+// Upload un fichier local comme Asset Contentful
+// Retourne l'id de l'asset créé
+export const uploadAssetToContentful = async (
+  file: File,
+  titre: string,
+): Promise<{ id: string; url: string }> => {
+  const environment = await getEnvironment()
+
+  // 1. Crée l'asset avec les métadonnées
+  const asset = await environment.createAsset({
+    fields: {
+      title: { fr: titre },
+      file: {
+        fr: {
+          contentType: file.type,
+          fileName: file.name,
+          // Contentful attend un upload via une URL signée
+          // On utilise l'API de upload d'abord
+          upload: await uploadFileToContentful(environment, file),
+        },
+      },
+    },
+  })
+
+  // 2. Traite l'asset (génère les variantes d'images)
+  const processed = await asset.processForAllLocales()
+
+  // 3. Publie l'asset pour qu'il soit accessible
+  const published = await processed.publish()
+
+  const url = published.fields.file?.fr?.url
+  const finalUrl = url ? `https:${url}` : ''
+
+  return { id: published.sys.id, url: finalUrl }
+}
+
+// Fonction interne : upload les bytes du fichier
+async function uploadFileToContentful(environment: any, file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+
+  const upload = await environment.createUpload({
+    file: Buffer.from(buffer),
+    contentType: file.type,
+  })
+
+  return upload.sys.id
+}
+
+// Liste tous les assets existants (pour le picker d'assets dans l'éditeur)
+export const listAssets = async (search?: string) => {
+  const environment = await getEnvironment()
+
+  const query: Record<string, any> = { limit: 100 }
+  if (search) query['fields.title[match]'] = search
+
+  const assets = await environment.getAssets(query)
+
+  return assets.items.map((asset: any) => ({
+    id: asset.sys.id,
+    titre: asset.fields.title?.fr ?? '',
+    url: asset.fields.file?.fr?.url ? `https:${asset.fields.file.fr.url}` : '',
+    contentType: asset.fields.file?.fr?.contentType ?? '',
+    fileName: asset.fields.file?.fr?.fileName ?? '',
+  }))
+}
+
+// Met à jour l'illustration d'une fiche (lien vers un asset existant)
+export const setFicheIllustration = async (
+  ficheId: string,
+  assetId: string,
+): Promise<void> => {
+  const environment = await getEnvironment()
+  const entry = await environment.getEntry(ficheId)
+
+  entry.fields.illustration = {
+    fr: {
+      sys: {
+        type: 'Link',
+        linkType: 'Asset',
+        id: assetId,
+      },
+    },
+  }
+
+  await entry.update()
 }

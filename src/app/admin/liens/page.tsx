@@ -38,7 +38,7 @@ export default function AdminLiensPage() {
   const {
     search, setSearch,
     filters, setFilter,
-    sortKey, sortDir, toggleSort,
+    sortKey, sortDir, toggleSort, setSort,
     filtered,
     paginated,
     page,
@@ -144,7 +144,7 @@ export default function AdminLiensPage() {
           onChange={(e) => setFilter('statut', e.target.value)}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
         >
-          <option value="">Statut (tous)</option>
+          <option value="">Statut</option>
           <option value="published">Publié</option>
           <option value="draft">Brouillon</option>
         </select>
@@ -158,6 +158,26 @@ export default function AdminLiensPage() {
           />
           Afficher seulement les vides
         </label>
+
+        <select
+          value={String(sortKey ?? 'updateAt')}
+          onChange={(e) => setSort(e.target.value as keyof Lien, sortDir)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="updatedAt">Tri: date de modification</option>
+          <option value="titre">Tri: titre</option>
+          <option value="statut">Tri: statut</option>
+          <option value="url">Tri: URL</option>
+        </select>
+
+        <select
+          value={sortDir}
+          onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Lien, e.target.value as 'asc' | 'desc')}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="desc">Ordre: décroissant</option>
+          <option value="asc">Ordre: croissant</option>
+        </select>
 
         {(search || Object.values(filters).some(Boolean)) && (
           <button type="button" onClick={() => { setSearch(''); setFilter('statut', ''); setFilter('estVide', '') }} className="text-xs text-gray-400 hover:text-gray-600">✕ Reset</button>
@@ -271,6 +291,11 @@ export default function AdminLiensPage() {
                         icon: l.statut === 'published' ? '○' : '●',
                         onClick: () => handlePublishOne(l.id),
                         disabled: l.estVide && l.statut !== 'published',
+                      },
+                      {
+                        label: 'OUvrir dans Contentful',
+                        icon: '↗',
+                        onClick: () => window.open(`https://app.contentful.com/spaces/${process.env.CONTENTFUL_SPACE_ID}/entries/${l.id}`, '_blank'),
                       },
                       {
                         label: 'Supprimer',

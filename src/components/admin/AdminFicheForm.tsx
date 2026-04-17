@@ -5,6 +5,9 @@ import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PrimaryButton } from '@/components/Buttons'
+import { useState } from 'react'
+import { AssetPicker } from '@/components/admin/editor/AssetPicker'
+import { setFicheIllustration } from '@/services/contentful-management'
 
 // Tous les types de dispositif extraits de contentful.d.ts
 const TYPES_DISPOSITIF = [
@@ -55,6 +58,8 @@ export type AdminFicheFields = {
 }
 
 type Props = {
+  ficheId?: string
+  illustrationUrl?: string
   defaultValues?: Partial<AdminFicheFields>
   onSave: (data: AdminFicheFields) => Promise<void>
   onPublish?: () => Promise<void>
@@ -63,6 +68,8 @@ type Props = {
 }
 
 export const AdminFicheForm = ({
+  ficheId,
+  illustrationUrl: initialIllustrationUrl,
   defaultValues,
   onSave,
   onPublish,
@@ -77,6 +84,8 @@ export const AdminFicheForm = ({
     formState: { errors, isSubmitting },
   } = useForm<AdminFicheFields>({ defaultValues })
 
+  const [illustrationUrl, setIllustrationUrl] = useState(initialIllustrationUrl ?? '')
+  const [showIllustrationPicker, setShowIllustrationPicker] = useState(false)
   // On observe la description pour afficher le compteur de caractères
   const descriptionValue = watch('description') ?? ''
 
@@ -193,6 +202,81 @@ export const AdminFicheForm = ({
         </div>
       </section>
 
+      {/* ── Illustration ── */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Illustration <span className="text-red-500">*</span>
+        </label>
+
+        {illustrationUrl ? (
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <img
+              src={illustrationUrl}
+              alt="Illustration"
+              style={{ height: 120, borderRadius: 8, border: '1px solid #e5e7eb', objectFit: 'cover' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowIllustrationPicker(true)}
+              style={{
+                position: 'absolute',
+                top: 6,
+                right: 6,
+                background: 'rgba(0,0,0,0.5)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                padding: '3px 8px',
+                fontSize: 11,
+                cursor: 'pointer',
+              }}
+            >
+              Changer
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowIllustrationPicker(true)}
+            style={{
+              width: '100%',
+              height: 80,
+              border: '2px dashed #e5e7eb',
+              borderRadius: 8,
+              background: '#f9fafb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: 13,
+              color: '#6b7280',
+              gap: 8,
+            }}
+          >
+            <span>🖼</span> Choisir une illustration (obligatoire)
+          </button>
+        )}
+
+        {showIllustrationPicker && (
+          <AssetPicker
+            mode="illustration"
+            currentAssetUrl={illustrationUrl}
+            onSelect={async (asset) => {
+              setIllustrationUrl(asset.url)
+              setShowIllustrationPicker(false)
+              // Si la fiche existe déjà, on peut lier l'asset immédiatement
+              if (ficheId) {
+                try {
+                  await setFicheIllustration(ficheId, asset.id)
+                } catch {
+                  // Sera sauvegardé dans le prochain save
+                }
+              }
+            }}
+            onClose={() => setShowIllustrationPicker(false)}
+          />
+        )}
+      </div>
       {/* ── Section 2 : Description courte ── */}
       <section>
         <h2 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">

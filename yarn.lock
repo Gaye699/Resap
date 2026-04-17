@@ -1589,6 +1589,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/extension-color@npm:^3.22.3":
+  version: 3.22.3
+  resolution: "@tiptap/extension-color@npm:3.22.3"
+  peerDependencies:
+    "@tiptap/extension-text-style": ^3.22.3
+  checksum: 10c0/e7c306e5a88eaf3498615c195b712d84df913ad2d334bf0df0eef62305ae48b62497ab8e097c5467f57b7c9afa91f812907f2e2109c11fb390246bb3c2eacb34
+  languageName: node
+  linkType: hard
+
 "@tiptap/extension-document@npm:^3.20.5":
   version: 3.20.5
   resolution: "@tiptap/extension-document@npm:3.20.5"
@@ -1755,6 +1764,15 @@ __metadata:
   peerDependencies:
     "@tiptap/core": ^3.20.5
   checksum: 10c0/440831ef63a5198267d437849a30bdd5174b584bc7e7115297e8fb48720eebe89e6c1c52ec0d57f914127557bf606d8ad7afd7b84d37ee079701233878121a8d
+  languageName: node
+  linkType: hard
+
+"@tiptap/extension-text-style@npm:^3.22.3":
+  version: 3.22.3
+  resolution: "@tiptap/extension-text-style@npm:3.22.3"
+  peerDependencies:
+    "@tiptap/core": ^3.22.3
+  checksum: 10c0/f80785b3f9c1891f6554d68945ec4fd972a4a21e07c382fa72b938ba883cbc965a8743ca7dae51fee12ea1943dd7079a0520bcafdf49f919d51a983294747981
   languageName: node
   linkType: hard
 
@@ -10158,10 +10176,12 @@ __metadata:
     "@tailwindcss/line-clamp": "npm:^0.4.4"
     "@tailwindcss/postcss": "npm:^4.1.10"
     "@tailwindcss/typography": "npm:^0.5.16"
+    "@tiptap/extension-color": "npm:^3.22.3"
     "@tiptap/extension-image": "npm:^3.20.5"
     "@tiptap/extension-link": "npm:^3.20.5"
     "@tiptap/extension-placeholder": "npm:^3.20.5"
     "@tiptap/extension-text-align": "npm:^3.20.5"
+    "@tiptap/extension-text-style": "npm:^3.22.3"
     "@tiptap/extension-underline": "npm:^3.20.5"
     "@tiptap/pm": "npm:^3.20.5"
     "@tiptap/react": "npm:^3.20.5"
