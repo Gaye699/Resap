@@ -12,6 +12,7 @@ import {
 import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
 import { useTableFilters } from '@/hooks/useTableFilters'
+import { PencilIcon, DocumentIcon, CheckIcon, CircleIcon, ExternalLinkIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
 
 type Fiche = Awaited<ReturnType<typeof listFiches>>[number]
 
@@ -131,7 +132,8 @@ export default function AdminFichesPage() {
             href="/admin/fiches/nouveau"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
           >
-            + Nouvelle fiche
+            <PlusIcon className="w-4 h-4" />
+            Nouvelle fiche
           </Link>
         </div>
       </div>
@@ -139,7 +141,7 @@ export default function AdminFichesPage() {
       {/* Filtres */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-56">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           <input
             type="text"
             value={search}
@@ -245,23 +247,28 @@ export default function AdminFichesPage() {
                   <ActionMenu
                     actions={[
                     {
-                      label: 'Modifier',
-                      icon: '✏️',
+                      label: 'Éditeur visuel',
+                      icon: <PencilIcon className="w-4 h-4" />,
                       onClick: () => router.push(`/admin/fiches/${fiche.id}/editor`),
                     },
                     {
+                      label: 'Modifier',
+                      icon: '📝',
+                      onClick: () => router.push(`/admin/fiches/${fiche.id}/modifier`),
+                    },
+                    {
                       label: fiche.statut === 'published' ? 'Dépublier' : 'Publier',
-                      icon: fiche.statut === 'published' ? '○' : '●',
+                      icon: fiche.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
                       onClick: () => handlePublishOne(fiche.id),
                     },
                     {
                       label: 'Voir sur le site',
-                      icon: '↗',
+                      icon: <ExternalLinkIcon className="w-4 h-4" />,
                       onClick: () => window.open(`https://www.resap.fr/fiches/${fiche.categorie}/${fiche.slug}`, '_blank'),
                     },
                     {
                       label: 'Supprimer',
-                      icon: '🗑',
+                      icon: <TrashIcon className="w-4 h-4" />,
                       variant: 'danger',
                       divider: true,
                       onClick: () => handleDeleteOne(fiche.id),
@@ -388,10 +395,10 @@ export default function AdminFichesPage() {
                     <td className="px-4 py-3 text-right">
                       <ActionMenu
                         actions={[
-                        { label: 'Éditeur visuel', icon: '✏️', onClick: () => router.push(`/admin/fiches/${f.id}/editor`) },
-                        { label: 'Modifier', icon: '📝', onClick: () => router.push(`/admin/fiches/${f.id}/modifier`) },
-                        { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: '●', onClick: () => handlePublishOne(f.id) },
-                        { label: 'Supprimer', icon: '🗑', variant: 'danger', divider: true, onClick: () => handleDeleteOne(f.id) },
+                        { label: 'Éditeur visuel', icon: <PencilIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/editor`) },
+                        { label: 'Modifier', icon: <DocumentIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/modifier`) },
+                        { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: <CheckIcon className="w-4 h-4" />, onClick: () => handlePublishOne(f.id) },
+                        { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => handleDeleteOne(f.id) },
                       ]}
                       />
                     </td>

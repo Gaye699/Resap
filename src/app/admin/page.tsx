@@ -75,7 +75,7 @@ export default async function AdminDashboard() {
       {/* Alerte liens vides */}
       {stats.liensVides > 0 && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <span className="text-red-500 text-xl">⚠️</span>
+          <span className="text-red-500 text-xl"></span>
           <div>
             <p className="font-medium text-red-700">
               {stats.liensVides} lien(s) en brouillon sans contenu

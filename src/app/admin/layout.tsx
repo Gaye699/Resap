@@ -32,70 +32,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (pathname === '/admin/login') return children
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
+    <div className="flex min-h-screen bg-gray-100">
       {/* SIDEBAR */}
-      <aside
-        style={{
-          width: collapsed ? 56 : 220,
-          minHeight: '100vh',
-          background: '#0f172a',
-          color: 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          flexShrink: 0,
-          transition: 'width 0.2s ease',
-          overflow: 'hidden',
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-        }}
-      >
-        {/* Header sidebar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'space-between',
-            padding: collapsed ? '16px 0' : '16px 16px',
-            borderBottom: '1px solid #1e293b',
-            flexShrink: 0,
-          }}
-        >
+      <aside className={`${collapsed ? 'w-16' : 'w-48'} flex-shrink-0 bg-gray-800 flex flex-col transition-all duration-200`}>
+        {/* Logo container */}
+        <div className="flex items-center gap-2 p-4 border-b border-white/10">
           {!collapsed && (
-            <div>
-              <p style={{ fontWeight: 700, fontSize: 15, margin: 0, whiteSpace: 'nowrap' }}>
-                RESAP Admin
-              </p>
-              <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0', whiteSpace: 'nowrap' }}>
-                {process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'dev'}
-              </p>
-            </div>
+            <>
+              <div className="w-7 h-7 bg-teal-400 rounded-md flex items-center justify-center text-white text-sm font-medium">
+                R
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">RESAP</p>
+                <p className="text-[10px] text-white/50">
+                  {process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'dev'}
+                </p>
+              </div>
+            </>
           )}
           <button
             type="button"
             onClick={toggle}
             title={collapsed ? 'Ouvrir le menu' : 'Reduire le menu'}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              fontSize: 18,
-              padding: 4,
-              lineHeight: 1,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className="ml-auto text-white/60 hover:text-white flex-shrink-0"
           >
             {collapsed ? '>' : '<'}
           </button>
         </div>
 
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: '12px 8px', overflow: 'hidden' }}>
+        <nav className="flex flex-col gap-1 p-2 flex-1">
           {NAV.map(({ href, label, icon, exact }) => {
             const isActive = exact ? pathname === href : pathname.startsWith(href)
 
@@ -104,33 +70,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={href}
                 href={href}
                 title={collapsed ? label : undefined}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: collapsed ? '10px 0' : '9px 12px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  borderRadius: 8,
-                  marginBottom: 2,
-                  textDecoration: 'none',
-                  background: isActive ? '#1e293b' : 'transparent',
-                  color: isActive ? '#f1f5f9' : '#94a3b8',
-                  fontSize: 14,
-                  fontWeight: isActive ? 600 : 400,
-                  transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) e.currentTarget.style.background = '#1e293b'
-                  if (!isActive) e.currentTarget.style.color = '#f1f5f9'
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) e.currentTarget.style.background = 'transparent'
-                  if (!isActive) e.currentTarget.style.color = '#94a3b8'
-                }}
+                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                  isActive
+                    ? 'bg-teal-400 text-white'
+                    : 'text-white/60 hover:bg-white/10 hover:text-white'
+                }`}
               >
-                <span style={{ fontSize: 13, flexShrink: 0, fontWeight: 700 }}>{icon}</span>
+                <span className="text-xs font-bold flex-shrink-0">{icon}</span>
                 {!collapsed && <span>{label}</span>}
               </Link>
             )
@@ -138,24 +84,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {!collapsed && (
-          <div
-            style={{
-              padding: '12px 16px',
-              borderTop: '1px solid #1e293b',
-              fontSize: 11,
-              color: '#475569',
-              flexShrink: 0,
-            }}
-          >
-            <span
-              style={{
-                display: 'inline-block',
-                padding: '2px 8px',
-                borderRadius: 20,
-                background: '#1e293b',
-                color: process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT === 'master' ? '#f87171' : '#4ade80',
-              }}
-            >
+          <div className="px-4 py-3 border-t border-white/10 text-[10px] text-white/30">
+            <span className="inline-block px-2 py-1 rounded-full bg-white/5">
               * {process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'dev'}
             </span>
           </div>
@@ -163,7 +93,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* CONTENU PRINCIPAL */}
-      <main style={{ flex: 1, overflow: 'auto', minWidth: 0 }}>
+      <main className="flex-1 overflow-auto p-5">
         {children}
       </main>
     </div>
