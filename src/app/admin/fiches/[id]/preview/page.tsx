@@ -39,7 +39,13 @@ export default function StructurePreviewPage() {
 
   const onSubmit = async (data: AdminStructureFields) => {
     try {
-      await updateStructureInContentful(id, data)
+      await updateStructureInContentful(id, {
+        ...data,
+        specialites: data.specialites
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
+      })
       toast.success('Sauvegardé en brouillon.')
       router.refresh()
     } catch (_e) {

@@ -47,7 +47,7 @@ export default function AdminFichesPage() {
   const {
     search, setSearch,
     filters, setFilter,
-    sortKey, sortDir, toggleSort,
+    sortKey, sortDir, toggleSort, setSort,
     filtered,
     paginated,
     page,
@@ -170,6 +170,26 @@ export default function AdminFichesPage() {
           ))}
         </select>
 
+        <select
+          value={String(sortKey ?? 'updatedAt')}
+          onChange={(e) => setSort(e.target.value as keyof Fiche, sortDir)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="updatedAt">Tri: Date de modification</option>
+          <option value="statut">Tri: Statut</option>
+          <option value="titre">Tri: Titre (décroissant)</option>
+          <option value="slug">Tri: Slug (croissant)</option>
+        </select>
+
+        <select
+          value={sortDir}
+          onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Fiche, e.target.value as 'asc' | 'desc')}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="desc">Ordre: décroissant</option>
+          <option value="asc">Ordre: croissant</option>
+        </select>
+
         {/* Sélectionner tout (vue grille) */}
         {view === 'grid' && (
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
@@ -225,14 +245,9 @@ export default function AdminFichesPage() {
                   <ActionMenu
                     actions={[
                     {
-                      label: 'Éditeur visuel',
+                      label: 'Modifier',
                       icon: '✏️',
                       onClick: () => router.push(`/admin/fiches/${fiche.id}/editor`),
-                    },
-                    {
-                      label: 'Modifier',
-                      icon: '📝',
-                      onClick: () => router.push(`/admin/fiches/${fiche.id}/modifier`),
                     },
                     {
                       label: fiche.statut === 'published' ? 'Dépublier' : 'Publier',

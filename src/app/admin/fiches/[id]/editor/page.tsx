@@ -33,6 +33,7 @@ export default function FicheEditorPage() {
         resume: fiche.resume,
         contenu: fiche.contenu,
         typeDispositif: fiche.typeDispositif,
+        illustrationId: fiche.illustrationId ?? '',
       })
       setIsPublished(fiche.statut === 'published')
       setTitre(fiche.titre)
