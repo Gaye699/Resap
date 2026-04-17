@@ -12,6 +12,7 @@ import {
 import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
 import { useTableFilters } from '@/hooks/useTableFilters'
+import { PencilIcon, DocumentIcon, CheckIcon, CircleIcon, ExternalLinkIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
 
 type Lien = Awaited<ReturnType<typeof listLiens>>[number]
 
@@ -122,14 +123,15 @@ export default function AdminLiensPage() {
           href="/admin/liens/nouveau"
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
         >
-          + Nouveau lien
+          <PlusIcon className="w-4 h-4" />
+          Nouveau lien
         </Link>
       </div>
 
       {/* Filtres */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-56">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           <input
             type="text"
             value={search}
@@ -263,18 +265,18 @@ export default function AdminLiensPage() {
                     actions={[
                       {
                         label: 'Modifier',
-                        icon: '📝',
+                        icon: <DocumentIcon className="w-4 h-4" />,
                         onClick: () => router.push(`/admin/liens/${l.id}/modifier`),
                       },
                       {
                         label: l.statut === 'published' ? 'Dépublier' : 'Publier',
-                        icon: l.statut === 'published' ? '○' : '●',
+                        icon: l.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
                         onClick: () => handlePublishOne(l.id),
                         disabled: l.estVide && l.statut !== 'published',
                       },
                       {
                         label: 'Supprimer',
-                        icon: '🗑',
+                        icon: <TrashIcon className="w-4 h-4" />,
                         variant: 'danger',
                         divider: true,
                         onClick: () => handleDeleteOne(l.id),

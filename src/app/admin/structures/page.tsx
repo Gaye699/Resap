@@ -13,6 +13,7 @@ import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
 import { useTableFilters } from '@/hooks/useTableFilters'
 import { types } from '@/data/structures_types'
+import { PencilIcon, DocumentIcon, CheckIcon, CircleIcon, ExternalLinkIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
 
 type Structure = Awaited<ReturnType<typeof listStructures>>[number]
 
@@ -137,7 +138,8 @@ export default function AdminStructuresPage() {
           href="/admin/structures/nouveau"
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
-          + Nouvelle structure
+          <PlusIcon className="w-4 h-4" />
+          Nouvelle structure
         </Link>
       </div>
 
@@ -146,7 +148,7 @@ export default function AdminStructuresPage() {
 
         {/* Recherche */}
         <div className="relative flex-1 min-w-56">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           <input
             type="text"
             value={search}
@@ -295,27 +297,27 @@ export default function AdminStructuresPage() {
                   <ActionMenu actions={[
                     {
                       label: 'Éditeur visuel',
-                      icon: '✏️',
+                      icon: <PencilIcon className="w-4 h-4" />,
                       onClick: () => router.push(`/admin/structures/${s.id}/editor`),
                     },
                     {
                       label: 'Modifier (formulaire)',
-                      icon: '📝',
+                      icon: <DocumentIcon className="w-4 h-4" />,
                       onClick: () => router.push(`/admin/structures/${s.id}/modifier`),
                     },
                     {
                       label: s.statut === 'published' ? 'Dépublier' : 'Publier',
-                      icon: s.statut === 'published' ? '○' : '●',
+                      icon: s.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
                       onClick: () => handlePublishOne(s.id),
                     },
                     {
                       label: 'Ouvrir dans Contentful',
-                      icon: '↗',
+                      icon: <ExternalLinkIcon className="w-4 h-4" />,
                       onClick: () => window.open(s.contentfulUrl, '_blank'),
                     },
                     {
                       label: 'Supprimer',
-                      icon: '🗑',
+                      icon: <TrashIcon className="w-4 h-4" />,
                       variant: 'danger',
                       divider: true,
                       onClick: () => {

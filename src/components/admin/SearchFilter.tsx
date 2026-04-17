@@ -1,5 +1,7 @@
 'use client'
 
+import { SearchIcon } from '@/components/Icons/AdminIcons'
+
 type FilterOption = { value: string; label: string }
 
 type Props = {
@@ -30,7 +32,7 @@ export function SearchFilter({
 
         {/* Champ de recherche texte */}
         <div className="flex-1 min-w-48 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
             value={searchValue}

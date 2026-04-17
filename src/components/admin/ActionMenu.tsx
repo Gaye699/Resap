@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, ReactNode } from 'react'
 
 export type Action = {
   label: string
-  icon?: string
+  icon?: ReactNode
   onClick: () => void
   variant?: 'default' | 'danger'
   disabled?: boolean
@@ -109,7 +109,7 @@ export function ActionMenu({ actions }: Props) {
                   e.currentTarget.style.background = 'none'
                 }}
               >
-                {action.icon && <span style={{ fontSize: 14 }}>{action.icon}</span>}
+                {action.icon && <span className="w-4 h-4 flex-shrink-0">{action.icon}</span>}
                 {action.label}
               </button>
             </div>
