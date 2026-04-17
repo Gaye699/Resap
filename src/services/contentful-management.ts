@@ -410,6 +410,12 @@ export const getFicheById = async (id: string) => {
       .join('\n')
   }
 
+  const extractLienIds = (field: unknown): string[] => {
+  if (!field || typeof field !== 'object') return []
+  const obj = field as { fr?: Array<{ sys: { id: string } }> }
+  return (obj.fr ?? []).map((l) => l.sys.id)
+  }
+
   return {
     id: entry.sys.id,
     titre: (entry.fields.titre as { fr: string })?.fr ?? '',
@@ -422,6 +428,9 @@ export const getFicheById = async (id: string) => {
     typeDispositif: (entry.fields.typeDispositif as { fr: string[] } | undefined)?.fr ?? [],
     illustrationId: (entry.fields.illustration as { fr: { sys: { id: string } } } | undefined)?.fr?.sys?.id,
     statut: entry.sys.publishedAt ? 'published' : 'draft' as const,
+    outilsIds: extractLienIds(entry.fields.outils),
+    patientsIds: extractLienIds(entry.fields.patients),
+    pourEnSavoirPlusIds: extractLienIds(entry.fields.pourEnSavoirPlus),
   }
 }
 
