@@ -39,10 +39,9 @@ function StatCard({
 export default async function AdminDashboard() {
   // On récupère tout en parallèle pour aller plus vite
   // Promise.all = lance les 3 requêtes en même temps au lieu d'attendre l'une après l'autre
-  const [structures, fiches, liens] = await Promise.all([
+  const [structures, fiches] = await Promise.all([
     listStructures(),
     listFiches(),
-    listLiens(),
   ])
 
   // Calcul des stats
@@ -51,8 +50,6 @@ export default async function AdminDashboard() {
     structuresDraft: structures.filter((s) => s.statut === 'draft').length,
     fiches: fiches.length,
     fichesDraft: fiches.filter((f) => f.statut === 'draft').length,
-    liens: liens.length,
-    liensVides: liens.filter((l) => l.estVide).length,
   }
 
   return (
@@ -70,49 +67,6 @@ export default async function AdminDashboard() {
             </span>
           )}
         </p>
-      </div>
-
-      {/* Alerte liens vides */}
-      {stats.liensVides > 0 && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <span className="text-red-500 text-xl"></span>
-          <div>
-            <p className="font-medium text-red-700">
-              {stats.liensVides} lien(s) en brouillon sans contenu
-            </p>
-            <p className="text-sm text-red-600 mt-0.5">
-              Ces liens ne peuvent pas être publiés. Allez dans{' '}
-              <Link href="/admin/liens" className="underline">Liens</Link> pour les corriger.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Cartes statistiques */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <StatCard
-          href="/admin/structures"
-          emoji="🏥"
-          titre="Structures"
-          total={stats.structures}
-          draft={stats.structuresDraft}
-        />
-        <StatCard
-          href="/admin/fiches"
-          emoji="📄"
-          titre="Fiches pratiques"
-          total={stats.fiches}
-          draft={stats.fichesDraft}
-        />
-        <StatCard
-          href="/admin/liens"
-          emoji="🔗"
-          titre="Liens"
-          total={stats.liens}
-          draft={stats.liensVides}
-          draftLabel="vide(s)"
-          draftDanger={stats.liensVides > 0}
-        />
       </div>
     </div>
   )

@@ -247,20 +247,16 @@ export default function AdminFichesPage() {
                   <ActionMenu
                     actions={[
                     {
-                      label: 'Éditeur visuel',
+                      label: 'Modifier',
                       icon: <PencilIcon className="w-4 h-4" />,
                       onClick: () => router.push(`/admin/fiches/${fiche.id}/editor`),
                     },
                     {
-                      label: 'Modifier',
-                      icon: '📝',
-                      onClick: () => router.push(`/admin/fiches/${fiche.id}/modifier`),
-                    },
-                    {
                       label: fiche.statut === 'published' ? 'Dépublier' : 'Publier',
                       icon: fiche.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
-                      onClick: () => handlePublishOne(fiche.id),
+                      onClick: () => handleTogglePublish(fiche.id),
                     },
+
                     {
                       label: 'Voir sur le site',
                       icon: <ExternalLinkIcon className="w-4 h-4" />,
