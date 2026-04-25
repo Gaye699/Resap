@@ -1,43 +1,43 @@
 'use client'
 
-import Link from 'next/link'
-import { AdminFicheForm, AdminFicheFields } from '@/components/admin/AdminFicheForm'
-import { createFicheInContentful } from '@/services/contentful-management'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createFicheVide } from '@/services/contentful-management'
 
 export default function NouvelleFichePage() {
-  const handleSave = async (data: AdminFicheFields) => {
-    await createFicheInContentful({
-      titre: data.titre,
-      slug: data.slug,
-      categorie: data.categorie,
-      description: data.description,
-      tags: data.tags.split(',').map((t) => t.trim()).filter(Boolean),
-      resume: data.resume,
-      contenu: data.contenu,
-      typeDispositif: data.typeDispositif ?? [],
-    })
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Création immédiate d'une fiche brouillon vide
+    createFicheVide()
+      .then(({ id }) => {
+        // Redirige vers l'éditeur visuel avec la nouvelle fiche
+        router.replace(`/admin/fiches/${id}/editor`)
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Erreur lors de la création.')
+      })
+  }, [router])
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-600 mb-4">{error}</p>
+        <a href="/admin/fiches" className="text-blue-600 hover:underline text-sm">
+          ← Retour aux fiches
+        </a>
+      </div>
+    )
   }
 
   return (
-    <div className="p-8 max-w-3xl">
-      <Link href="/admin/fiches" className="text-sm text-gray-500 hover:text-gray-700 mb-6 inline-block">
-        ← Retour aux fiches
-      </Link>
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Nouvelle fiche pratique</h1>
-        <p className="text-gray-500 mt-1">
-          La fiche sera créée en brouillon dans l&apos;environnement{' '}
-          <strong className="text-blue-600">{process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'dev'}</strong>.
-        </p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 p-8">
-        <AdminFicheForm
-          onSave={handleSave}
-          backHref="/admin/fiches"
-          isCreation
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent
+          rounded-full animate-spin mx-auto mb-4"
         />
+        <p className="text-gray-600 text-sm">Création de la nouvelle fiche...</p>
       </div>
     </div>
   )
