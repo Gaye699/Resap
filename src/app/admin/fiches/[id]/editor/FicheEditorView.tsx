@@ -118,9 +118,9 @@ export function FicheEditorView({ ficheId }: Props) {
     ? {
         title: 'illustration',
         file: {
-          url: values.illustrationUrl.replace('https:', ''),
+          url: values.illustrationUrl.replace('https:', '') + '?w=400&q=400',
           contentType: 'image/jpeg',
-          details: { image: { width: 800, height: 600 } },
+          details: { image: { width: 400, height: 400 } },
         },
       }
     : undefined,

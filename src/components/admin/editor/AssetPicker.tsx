@@ -181,14 +181,18 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                     >
                       {/* Aperçu */}
                       <div style={{ height: 90, background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                        {asset.contentType.startsWith('image/') ? (
-                          <img src={asset.url} alt={asset.titre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <span style={{ fontSize: 32 }}>
-                            {asset.contentType.includes('pdf') ? '📄' : '📎'}
-                          </span>
-                        )}
-                      </div>
+                      {asset.contentType.startsWith('image/') && asset.url ? (
+                        <img 
+                          src={asset.url} 
+                          alt={asset.titre} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <span style={{ fontSize: 32 }}>
+                          {asset.contentType.includes('pdf') ? '📄' : '📎'}
+                        </span>
+                      )}
+                    </div>
                       {/* Infos */}
                       <div style={{ padding: '6px 8px' }}>
                         <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
