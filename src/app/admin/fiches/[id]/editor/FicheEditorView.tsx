@@ -6,10 +6,8 @@ import { useEditor as useEditorCtx } from '@/components/admin/editor/EditorConte
 import { EditableField } from '@/components/admin/editor/EditableField'
 import { HeaderFiche } from '@/components/Layout/HeaderFiche'
 import { Container } from '@/components/Layout/Container'
-import { FloatingButtons } from '@/components/FloatingButtons'
 import { Prose } from '@/components/Prose'
 import { SecondaryButton } from '@/components/Buttons'
-import { StructuresList } from '@/components/Map/StructuresList'
 import { Box } from '@/components/Layout/Box'
 import { Link } from '@/components/Links'
 import { categories } from '@/data/categories'
@@ -19,15 +17,10 @@ import { getStructuresByTypes, listLiens } from '@/services/contentful-managemen
 
 const FICHE_FIELDS = {
   titre: {
-    key: 'titre',
-    label: 'Titre',
-    type: 'text' as const,
-    hint: 'Titre principal affiché sur la fiche.',
+    key: 'titre', label: 'Titre', type: 'text' as const,
   },
   categorie: {
-    key: 'categorie',
-    label: 'Catégorie',
-    type: 'select' as const,
+    key: 'categorie', label: 'Catégorie', type: 'select' as const,
     options: [
       { value: 'sante', label: 'Accès à la santé' },
       { value: 'besoins-primaires', label: 'Besoins primaires' },
@@ -36,39 +29,31 @@ const FICHE_FIELDS = {
     ],
   },
   slug: {
-    key: 'slug',
-    label: 'Slug (URL)',
-    type: 'text' as const,
-    hint: 'Identifiant dans l\'URL. Exemple : acces-aux-soins. Minuscules et tirets uniquement.',
+    key: 'slug', label: 'Slug (URL)', type: 'text' as const,
+    hint: 'Minuscules et tirets uniquement. Ex : acces-aux-soins',
   },
   description: {
-    key: 'description',
-    label: 'Description courte',
-    type: 'textarea' as const,
+    key: 'description', label: 'Description courte',
+    type: 'textarea' as const,   // ← textarea, pas markdown
     maxLength: 280,
-    hint: 'Max 280 caractères. Affiché dans les listes et la recherche.',
+    hint: 'Max 280 caractères.',
   },
   tags: {
-    key: 'tags',
-    label: 'Tags',
-    type: 'text' as const,
-    hint: 'Séparés par des virgules. Ex : migrants, SDF, PASS',
+    key: 'tags', label: 'Tags', type: 'text' as const,
+    hint: 'Séparés par des virgules.',
   },
   resume: {
-    key: 'resume',
-    label: 'Résumé',
-    type: 'richtext' as const,
-    hint: 'Affiché dès l\'ouverture de la fiche.',
+    key: 'resume', label: 'Résumé',
+    type: 'richtext' as const,   // ← richtext = Tiptap WYSIWYG
+    hint: 'S\'affiche en premier sur la fiche.',
   },
   contenu: {
-    key: 'contenu',
-    label: 'Contenu détaillé',
-    type: 'richtext' as const,
-    hint: 'Affiché après "Afficher les détails".',
+    key: 'contenu', label: 'Contenu détaillé',
+    type: 'richtext' as const,   // ← richtext = Tiptap WYSIWYG
+    hint: 'Affiché après le résumé.',
   },
   typeDispositif: {
-    key: 'typeDispositif',
-    label: 'Types de dispositif',
+    key: 'typeDispositif', label: 'Types de dispositif',
     type: 'checkboxGroup' as const,
     options: [
       'Accompagnement MNA', "Association d'aide aux migrants",
@@ -80,31 +65,23 @@ const FICHE_FIELDS = {
       'HUDA', 'MDPH', 'MSP', 'OFII', 'PASS', 'PRAHDA', 'Préfecture',
       'Réseaux polyvalents (tous âges et toutes pathologies)', 'SIAO', 'SPADA',
     ].map((t) => ({ value: t, label: t })),
-    hint: 'Détermine les structures liées affichées sur la carte.',
   },
   illustrationUrl: {
-    key: 'illustrationUrl',
-    label: 'Illustration',
+    key: 'illustrationUrl', label: 'Illustration',
     type: 'image' as const,
-    hint: 'Image principale de la fiche (obligatoire).',
+    hint: 'Image principale (obligatoire).',
   },
   outilsIds: {
-    key: 'outilsIds',
-    label: 'Quelques outils',
+    key: 'outilsIds', label: 'Quelques outils',
     type: 'liens' as const,
-    hint: 'Liens affichés dans le bloc "Quelques outils".',
   },
   patientsIds: {
-    key: 'patientsIds',
-    label: 'Pour les patients',
+    key: 'patientsIds', label: 'Pour les patients',
     type: 'liens' as const,
-    hint: 'Liens affichés dans le bloc "Pour les patients".',
   },
   pourEnSavoirPlusIds: {
-    key: 'pourEnSavoirPlusIds',
-    label: 'Pour aller plus loin',
+    key: 'pourEnSavoirPlusIds', label: 'Pour aller plus loin',
     type: 'liens' as const,
-    hint: 'Liens affichés dans le bloc "Pour aller plus loin".',
   },
 }
 
@@ -114,19 +91,11 @@ type Props = { ficheId: string }
 
 export function FicheEditorView({ ficheId }: Props) {
   const { values, clearSelection, updateValue } = useEditorCtx()
-  const [showDetails, setShowDetails] = useState(false)
-  const [structures, setStructures] = useState<any[]>([])
+  const [showDetails, setShowDetails] = useState(true)
   const [allLiens, setAllLiens] = useState<any[]>([])
 
   // Charge les structures liées selon typeDispositif
   const typeDispositif = Array.isArray(values.typeDispositif) ? values.typeDispositif : []
-  useEffect(() => {
-    if (typeDispositif.length > 0) {
-      getStructuresByTypes(typeDispositif).then(setStructures)
-    } else {
-      setStructures([])
-    }
-  }, [JSON.stringify(typeDispositif)])
 
   // Charge tous les liens disponibles (pour les blocs latéraux)
   useEffect(() => {
@@ -173,17 +142,96 @@ export function FicheEditorView({ ficheId }: Props) {
       {/* ── HEADER — identique au site public ── */}
       <HeaderFiche fiche={fichePreview as any} categorie={categorie} />
 
-      {!values.illustrationUrl && (
-        <EditableField field={FICHE_FIELDS.illustrationUrl} as="div">
-          <div className="bg-gray-100 text-center py-8 text-gray-400 text-sm">
-            🖼 Cliquez pour ajouter l'illustration (obligatoire)
-          </div>
-        </EditableField>
-      )}
+      <div style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+      <Container>
+        <div className="py-3 flex items-center gap-3">
+          <EditableField field={FICHE_FIELDS.categorie} as="span">
+            <span
+              className="inline-flex items-center gap-1.5 text-sm font-medium
+                px-3 py-1 rounded-full cursor-pointer"
+              style={{
+                background: categorie?.color ?? '#eff6ff',
+                color: categorie?.textColor ?? '#1d4ed8',
+              }}
+            >
+              {categorie?.name ?? values.categorie ?? 'Catégorie non définie'}
+              <span style={{ fontSize: 10, opacity: 0.6 }}>✏️</span>
+            </span>
+          </EditableField>
+
+          {/* Slug également éditable ici */}
+          <EditableField field={FICHE_FIELDS.slug} as="span">
+            <span className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+              /fiches/{values.categorie ?? '...'}/{values.slug ?? 'slug'} ✏️
+            </span>
+          </EditableField>
+        </div>
+      </Container>
+    </div>
+
+      {/* Zone illustration — toujours visible, cliquable pour changer */}
+      <EditableField field={FICHE_FIELDS.illustrationUrl} as="div">
+        <div
+          style={{
+            position: 'relative',
+            cursor: 'pointer',
+            minHeight: 80,
+          }}
+        >
+          {values.illustrationUrl ? (
+            // Image existante — overlay "Changer" visible
+            <div style={{ position: 'relative' }}>
+              <img
+                src={values.illustrationUrl}
+                alt="Illustration"
+                style={{
+                  width: '100%',
+                  maxHeight: 200,
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                background: 'rgba(0,0,0,0.55)',
+                color: 'white',
+                fontSize: 11,
+                fontWeight: 500,
+                padding: '4px 10px',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}>
+                🖼 Modifier l'illustration
+              </div>
+            </div>
+          ) : (
+            // Aucune illustration — zone de drop visible
+            <div style={{
+              background: '#f0f4ff',
+              border: '2px dashed #93c5fd',
+              borderRadius: 8,
+              padding: '32px 16px',
+              textAlign: 'center',
+              margin: '0 0 16px',
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
+              <p style={{ fontSize: 13, color: '#3b82f6', fontWeight: 500, margin: 0 }}>
+                Cliquez pour ajouter l'illustration
+              </p>
+              <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0' }}>
+                Obligatoire — image principale de la fiche
+              </p>
+            </div>
+          )}
+        </div>
+      </EditableField>
 
       <div className="relative pb-12">
         <Container>
-          <FloatingButtons className="absolute top-5 2xl:top-20 xl:left-8" />
 
           {/* ── TITRE ── */}
           <div className="w-full py-10 lg:py-20">
@@ -212,13 +260,12 @@ export function FicheEditorView({ ficheId }: Props) {
                 )}
               </EditableField>
 
-              <SecondaryButton
-                type="button"
-                className="print:hidden block my-5 w-1/2 mx-auto"
-                onClick={(e) => { e.stopPropagation(); setShowDetails(not) }}
-              >
-                {showDetails ? 'Masquer les détails' : 'Afficher les détails'}
-              </SecondaryButton>
+              {/* Le bouton toggle n'est pas utile en édition — on affiche tout */}
+              <div className="my-6 flex items-center gap-3">
+                <div className="flex-1 border-t border-gray-200" />
+                <span className="text-xs text-gray-400 px-2">Contenu détaillé</span>
+                <div className="flex-1 border-t border-gray-200" />
+              </div>
 
               {/* CONTENU DÉTAILLÉ */}
               {showDetails && (
@@ -265,22 +312,6 @@ export function FicheEditorView({ ficheId }: Props) {
                 />
               </EditableField>
 
-            </div>
-
-            {/* ── CARTE STRUCTURES ── */}
-            <div className="w-full mt-10">
-              {structures.length > 0
-                ? <StructuresList structures={structures} />
-                : typeDispositif.length > 0
-                  ? (
-                    <div className="bg-gray-50 rounded-xl p-6 text-center text-sm text-gray-400">
-                      Aucune structure dans l'environnement{' '}
-                      <strong>{process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT}</strong>{' '}
-                      pour ces types de dispositif.
-                    </div>
-                  )
-                  : null
-              }
             </div>
           </div>
         </Container>

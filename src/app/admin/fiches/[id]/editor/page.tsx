@@ -50,29 +50,33 @@ export default function FicheEditorPage() {
     })
   }, [id])
 
-  const handleSave = useCallback(async (values: Record<string, any>) => {
-    // 1. Sauvegarde les champs texte/rich text
-    await updateFicheInContentful(id, {
-      titre: values.titre,
-      categorie: values.categorie,
-      description: values.description,
-      tags: (values.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean),
-      resume: values.resume,
-      contenu: values.contenu,
-      typeDispositif: values.typeDispositif ?? [],
-    })
+const handleSave = useCallback(async (values: Record<string, any>) => {
+  // DEBUG temporaire — vérifie dans la console que les IDs arrivent
+  console.log('outilsIds à sauvegarder:', values.outilsIds)
+  console.log('patientsIds à sauvegarder:', values.patientsIds)
+  console.log('pourEnSavoirPlusIds à sauvegarder:', values.pourEnSavoirPlusIds)
 
-    // 2. Sauvegarde les liens associés — SÉPARÉMENT
-    // C'était le bug : cette ligne manquait ou les IDs étaient vides
-    await updateFicheLiens(id, {
-      outils: values.outilsIds ?? [],
-      patients: values.patientsIds ?? [],
-      pourEnSavoirPlus: values.pourEnSavoirPlusIds ?? [],
-    })
+  await updateFicheInContentful(id, {
+    titre: values.titre,
+    categorie: values.categorie,
+    description: values.description,
+    tags: (values.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean),
+    resume: values.resume,
+    contenu: values.contenu,
+    typeDispositif: values.typeDispositif ?? [],
+  })
 
-    toast.success('Fiche sauvegardée en brouillon.')
-    setTitre(values.titre ?? titre)
-  }, [id, titre])
+  await updateFicheLiens(id, {
+    outils: Array.isArray(values.outilsIds) ? values.outilsIds : [],
+    patients: Array.isArray(values.patientsIds) ? values.patientsIds : [],
+    pourEnSavoirPlus: Array.isArray(values.pourEnSavoirPlusIds)
+      ? values.pourEnSavoirPlusIds
+      : [],
+  })
+
+  toast.success('Fiche sauvegardée.')
+  setTitre(values.titre ?? titre)
+}, [id, titre])
 
   const handlePublish = useCallback(async () => {
     if (isPublished) {
