@@ -76,8 +76,7 @@ export function InspectorPanel() {
           <TextareaField field={selectedField} value={value ?? ''} onChange={handleChange} />
         )}
 
-        {/* Rich text = éditeur WYSIWYG Tiptap */}
-        {selectedField.type === 'markdown' && (
+        {selectedField.type === 'richtext' && (
           <RichTextEditor
             value={value ?? ''}
             onChange={handleChange}

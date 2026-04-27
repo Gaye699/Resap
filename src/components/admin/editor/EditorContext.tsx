@@ -10,20 +10,14 @@ import {
   useMemo,
 } from 'react'
 
-// Définition d'un champ éditable — ce qu'on passe à <EditableField>
+// Définition d'un champ éditable 
 export type FieldDefinition = {
-  // Identifiant unique du champ (ex: 'titre', 'description', 'resume')
   key: string
-  // Label affiché dans le panneau (ex: 'Titre de la fiche')
   label: string
-  // Type de champ → détermine quel composant afficher dans InspectorPanel
-  type: 'text' | 'textarea' | 'markdown' | 'select' | 'checkboxGroup' | 'image' | 'liens'
-  // Options pour 'select' et 'checkboxGroup'
+  type: 'text' | 'textarea' | 'richtext' | 'select' | 'checkboxGroup' | 'image' | 'liens'
   options?: { value: string; label: string }[]
-  // Contraintes
   maxLength?: number
   required?: boolean
-  // Aide affichée sous le champ
   hint?: string
 }
 
