@@ -61,10 +61,12 @@ export default function StructureEditorPage() {
   return (
     <EditorProvider
       initialValues={initialValues}
+      ficheId={id}
       isPublished={isPublished}
       onSave={handleSave}
       onPublish={handlePublish}
     >
+
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <EditorToolbar titre={nom} backHref="/admin/structures" />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

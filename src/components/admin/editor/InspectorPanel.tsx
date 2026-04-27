@@ -33,7 +33,7 @@ export function InspectorPanel() {
   const handleChange = (newValue: any) => updateValue(selectedField.key, newValue)
 
   let fieldTypeLabel = 'Texte'
-  if (selectedField.type === 'markdown') {
+  if (selectedField.type === 'richtext') {
     fieldTypeLabel = 'Contenu riche'
   } else if (selectedField.type === 'checkboxGroup') {
     fieldTypeLabel = 'Cases à cocher'
@@ -99,11 +99,24 @@ export function InspectorPanel() {
         )}
 
         {selectedField.type === 'liens' && (
-          <LiensPicker
-            titre={selectedField.label}
-            selectedIds={value ?? []}
-            onChange={handleChange}
-          />
+          <div>
+            <p className="text-xs text-gray-400 mb-3">
+              {selectedField.hint ?? ''}
+            </p>
+            <LiensPicker
+              titre={selectedField.label}
+              selectedIds={value ?? []}
+              onChange={handleChange}
+              ficheId={ficheId}
+              bloc={
+                selectedField.key === 'outilsIds'
+                  ? 'outils'
+                  : selectedField.key === 'patientsIds'
+                    ? 'patients'
+                    : 'pourEnSavoirPlus'
+              }
+            />
+          </div>
         )}
 
         {selectedField.type === 'image' && (
@@ -111,20 +124,6 @@ export function InspectorPanel() {
           ficheId={ficheId}
           value={value ?? ''}
           onChange={handleChange}
-        />
-        )}
-
-        {selectedField.type === 'liens' && (
-        <LiensPicker
-          titre={selectedField.label}
-          selectedIds={value ?? []}
-          onChange={handleChange}
-          ficheId={ficheId}
-          bloc={
-            selectedField.key === 'outilsIds' ? 'outils'
-            : selectedField.key === 'patientsIds' ? 'patients'
-            : 'pourEnSavoirPlus'
-          }
         />
         )}
 

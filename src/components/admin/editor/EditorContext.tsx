@@ -1,4 +1,3 @@
-
 'use client'
 
 import {
@@ -10,7 +9,7 @@ import {
   useMemo,
 } from 'react'
 
-// Définition d'un champ éditable 
+// Définition d'un champ éditable
 export type FieldDefinition = {
   key: string
   label: string
@@ -52,7 +51,7 @@ type EditorProviderProps = {
   ficheId: string
   isPublished: boolean
   onSave: (values: EditorValues) => Promise<void>
-  onPublish: () => Promise<void>
+  onPublish: () => Promise<'published' | 'draft'>
 }
 
 export function EditorProvider({
@@ -90,7 +89,6 @@ export function EditorProvider({
     setIsSaving(true)
     try {
       await onSave(values)
-      setIsPublished(false)
     } finally {
       setIsSaving(false)
     }
@@ -99,10 +97,9 @@ export function EditorProvider({
   const publish = useCallback(async () => {
     setIsSaving(true)
     try {
-      // Sauvegarde d'abord les modifications en cours, puis publie
       await onSave(values)
-      await onPublish()
-      setIsPublished(true)
+      const nextStatus = await onPublish()
+      setIsPublished(nextStatus === 'published')
     } finally {
       setIsSaving(false)
     }

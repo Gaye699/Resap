@@ -1,17 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { not } from 'ramda'
 import { useEditor as useEditorCtx } from '@/components/admin/editor/EditorContext'
 import { EditableField } from '@/components/admin/editor/EditableField'
 import { HeaderFiche } from '@/components/Layout/HeaderFiche'
 import { Container } from '@/components/Layout/Container'
 import { Prose } from '@/components/Prose'
-import { SecondaryButton } from '@/components/Buttons'
 import { Box } from '@/components/Layout/Box'
-import { Link } from '@/components/Links'
 import { categories } from '@/data/categories'
-import { getStructuresByTypes, listLiens } from '@/services/contentful-management'
+import { listLiens } from '@/services/contentful-management'
 
 // ─── Définitions de TOUS les champs éditables ────────────────────────────────
 
@@ -20,7 +17,9 @@ const FICHE_FIELDS = {
     key: 'titre', label: 'Titre', type: 'text' as const,
   },
   categorie: {
-    key: 'categorie', label: 'Catégorie', type: 'select' as const,
+    key: 'categorie',
+    label: 'Catégorie',
+    type: 'select' as const,
     options: [
       { value: 'sante', label: 'Accès à la santé' },
       { value: 'besoins-primaires', label: 'Besoins primaires' },
@@ -28,32 +27,34 @@ const FICHE_FIELDS = {
       { value: 'interpretariat', label: 'Interprétariat' },
     ],
   },
-  slug: {
-    key: 'slug', label: 'Slug (URL)', type: 'text' as const,
-    hint: 'Minuscules et tirets uniquement. Ex : acces-aux-soins',
-  },
   description: {
-    key: 'description', label: 'Description courte',
-    type: 'textarea' as const,   // ← textarea, pas markdown
+    key: 'description',
+    label: 'Description courte',
+    type: 'textarea' as const,
     maxLength: 280,
     hint: 'Max 280 caractères.',
   },
   tags: {
-    key: 'tags', label: 'Tags', type: 'text' as const,
+    key: 'tags',
+    label: 'Tags',
+    type: 'text' as const,
     hint: 'Séparés par des virgules.',
   },
   resume: {
-    key: 'resume', label: 'Résumé',
-    type: 'richtext' as const,   // ← richtext = Tiptap WYSIWYG
+    key: 'resume',
+    label: 'Résumé',
+    type: 'richtext' as const,
     hint: 'S\'affiche en premier sur la fiche.',
   },
   contenu: {
-    key: 'contenu', label: 'Contenu détaillé',
-    type: 'richtext' as const,   // ← richtext = Tiptap WYSIWYG
+    key: 'contenu',
+    label: 'Contenu détaillé',
+    type: 'richtext' as const,
     hint: 'Affiché après le résumé.',
   },
   typeDispositif: {
-    key: 'typeDispositif', label: 'Types de dispositif',
+    key: 'typeDispositif',
+    label: 'Types de dispositif',
     type: 'checkboxGroup' as const,
     options: [
       'Accompagnement MNA', "Association d'aide aux migrants",
@@ -67,20 +68,24 @@ const FICHE_FIELDS = {
     ].map((t) => ({ value: t, label: t })),
   },
   illustrationUrl: {
-    key: 'illustrationUrl', label: 'Illustration',
+    key: 'illustrationUrl',
+    label: 'Illustration',
     type: 'image' as const,
     hint: 'Image principale (obligatoire).',
   },
   outilsIds: {
-    key: 'outilsIds', label: 'Quelques outils',
+    key: 'outilsIds',
+    label: 'Quelques outils',
     type: 'liens' as const,
   },
   patientsIds: {
-    key: 'patientsIds', label: 'Pour les patients',
+    key: 'patientsIds',
+    label: 'Pour les patients',
     type: 'liens' as const,
   },
   pourEnSavoirPlusIds: {
-    key: 'pourEnSavoirPlusIds', label: 'Pour aller plus loin',
+    key: 'pourEnSavoirPlusIds',
+    label: 'Pour aller plus loin',
     type: 'liens' as const,
   },
 }
@@ -89,13 +94,10 @@ const FICHE_FIELDS = {
 
 type Props = { ficheId: string }
 
-export function FicheEditorView({ ficheId }: Props) {
-  const { values, clearSelection, updateValue } = useEditorCtx()
-  const [showDetails, setShowDetails] = useState(true)
+export function FicheEditorView({ ficheId: _ficheId }: Props) {
+  const { values, clearSelection } = useEditorCtx()
+  const [showDetails] = useState(true)
   const [allLiens, setAllLiens] = useState<any[]>([])
-
-  // Charge les structures liées selon typeDispositif
-  const typeDispositif = Array.isArray(values.typeDispositif) ? values.typeDispositif : []
 
   // Charge tous les liens disponibles (pour les blocs latéraux)
   useEffect(() => {
@@ -118,7 +120,7 @@ export function FicheEditorView({ ficheId }: Props) {
     ? {
         title: 'illustration',
         file: {
-          url: values.illustrationUrl.replace('https:', '') + '?w=400&q=400',
+          url: `${values.illustrationUrl.replace('https:', '')}?w=400&q=400`,
           contentType: 'image/jpeg',
           details: { image: { width: 400, height: 400 } },
         },
@@ -140,7 +142,19 @@ export function FicheEditorView({ ficheId }: Props) {
     <div className="bg-white min-h-full" onClick={clearSelection}>
 
       {/* ── HEADER — identique au site public ── */}
-      <HeaderFiche fiche={fichePreview as any} categorie={categorie} />
+      <div
+        onClick={(e) => {
+          // Bloque les <a> et <Link> à l'intérieur du header
+          const target = e.target as HTMLElement
+          const anchor = target.closest('a')
+          if (anchor) {
+            e.preventDefault()
+            e.stopPropagation()
+          }
+        }}
+      >
+        <HeaderFiche fiche={fichePreview as any} categorie={categorie} />
+      </div>
 
       <div style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
       <Container>
@@ -150,19 +164,12 @@ export function FicheEditorView({ ficheId }: Props) {
               className="inline-flex items-center gap-1.5 text-sm font-medium
                 px-3 py-1 rounded-full cursor-pointer"
               style={{
-                background: categorie?.color ?? '#eff6ff',
-                color: categorie?.textColor ?? '#1d4ed8',
+                background: '#eff6ff',
+                color: '#1d4ed8',
               }}
             >
               {categorie?.name ?? values.categorie ?? 'Catégorie non définie'}
               <span style={{ fontSize: 10, opacity: 0.6 }}>✏️</span>
-            </span>
-          </EditableField>
-
-          {/* Slug également éditable ici */}
-          <EditableField field={FICHE_FIELDS.slug} as="span">
-            <span className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
-              /fiches/{values.categorie ?? '...'}/{values.slug ?? 'slug'} ✏️
             </span>
           </EditableField>
         </div>
@@ -205,7 +212,7 @@ export function FicheEditorView({ ficheId }: Props) {
                 alignItems: 'center',
                 gap: 4,
               }}>
-                🖼 Modifier l'illustration
+                🖼 Modifier l&apos;illustration
               </div>
             </div>
           ) : (
@@ -217,10 +224,11 @@ export function FicheEditorView({ ficheId }: Props) {
               padding: '32px 16px',
               textAlign: 'center',
               margin: '0 0 16px',
-            }}>
+            }}
+            >
               <div style={{ fontSize: 32, marginBottom: 8 }}>🖼</div>
               <p style={{ fontSize: 13, color: '#3b82f6', fontWeight: 500, margin: 0 }}>
-                Cliquez pour ajouter l'illustration
+                Cliquez pour ajouter l&apos;illustration
               </p>
               <p style={{ fontSize: 11, color: '#94a3b8', margin: '4px 0 0' }}>
                 Obligatoire — image principale de la fiche

@@ -8,6 +8,7 @@ import {
   listFiches,
   deleteFiche,
   publishFiche,
+  unpublishFiche,
 } from '@/services/contentful-management'
 import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
@@ -71,11 +72,17 @@ export default function AdminFichesPage() {
     } catch { toast.error('Erreur.') }
   }
 
-  const handlePublishOne = async (id: string) => {
+  const handleTogglePublish = async (fiche: Fiche) => {
     try {
-      await publishFiche(id)
-      toast.success('Fiche publiée.')
-      charger()
+      if (fiche.statut === 'published') {
+        await unpublishFiche(fiche.id)
+        toast.success('Fiche dépubliée.')
+      } else {
+        await publishFiche(fiche.id)
+        toast.success('Fiche publiée.')
+      }
+
+      await charger()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur.')
     }
@@ -254,7 +261,7 @@ export default function AdminFichesPage() {
                     {
                       label: fiche.statut === 'published' ? 'Dépublier' : 'Publier',
                       icon: fiche.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
-                      onClick: () => handleTogglePublish(fiche.id),
+                      onClick: () => handleTogglePublish(fiche),
                     },
 
                     {
@@ -393,7 +400,7 @@ export default function AdminFichesPage() {
                         actions={[
                         { label: 'Éditeur visuel', icon: <PencilIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/editor`) },
                         { label: 'Modifier', icon: <DocumentIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/modifier`) },
-                        { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: <CheckIcon className="w-4 h-4" />, onClick: () => handlePublishOne(f.id) },
+                        { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: <CheckIcon className="w-4 h-4" />, onClick: () => handleTogglePublish(f) },
                         { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => handleDeleteOne(f.id) },
                       ]}
                       />

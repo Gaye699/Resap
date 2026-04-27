@@ -27,7 +27,8 @@ export default function NouvelleFichePage() {
   return (
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="bg-white rounded-2xl border border-gray-200 p-10 max-w-md w-full
-        text-center shadow-sm">
+        text-center shadow-sm"
+      >
 
         <div className="text-5xl mb-4">📄</div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Nouvelle fiche pratique</h1>
@@ -36,18 +37,20 @@ export default function NouvelleFichePage() {
           <strong className="text-blue-600">
             {process.env.NEXT_PUBLIC_CONTENTFUL_ENVIRONMENT ?? 'dev'}
           </strong>
-          ), puis vous pourrez la compléter dans l'éditeur visuel.
+          ), puis vous pourrez la compléter dans l&apos;éditeur visuel.
         </p>
 
         {error && (
           <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200
-            rounded-lg p-3">
+            rounded-lg p-3"
+          >
             {error}
           </div>
         )}
 
         <div className="flex flex-col gap-3">
           <button
+            type="button"
             onClick={handleCreate}
             disabled={creating}
             className="w-full py-3 bg-blue-600 text-white text-sm font-semibold
@@ -58,7 +61,8 @@ export default function NouvelleFichePage() {
             {creating ? (
               <>
                 <span className="w-4 h-4 border-2 border-white border-t-transparent
-                  rounded-full animate-spin" />
+                  rounded-full animate-spin"
+                />
                 Création en cours...
               </>
             ) : (
@@ -67,6 +71,7 @@ export default function NouvelleFichePage() {
           </button>
 
           <button
+            type="button"
             onClick={handleCancel}
             disabled={creating}
             className="w-full py-3 border border-gray-200 text-gray-600 text-sm

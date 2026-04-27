@@ -69,27 +69,38 @@ export function RichTextEditor({
 
   // FONCTION POUR INSÉRER IMAGE / LIEN
   const handleEmbedAsset = (asset: {
-    id: string
-    titre: string
-    url: string
-    contentType: string
-  }) => {
-    setShowAssetPicker(false)
+  id: string
+  titre: string
+  url: string
+  contentType: string
+  fileName: string
+}) => {
+  setShowAssetPicker(false)
+  if (!editor) return
 
-    if (asset.contentType.startsWith('image/')) {
-      editor?.chain().focus().setImage({
-        src: asset.url,
-        alt: asset.titre,
-      }).run()
-    } else {
-      editor?.chain().focus()
-        .extendMarkRange('link')
-        .insertContent(
-          `<a href="${asset.url}" target="_blank" rel="noopener noreferrer">${asset.titre}</a>`
-                )
-        .run()
-    }
+  if (asset.contentType.startsWith('image/')) {
+    // Image 
+    editor.chain().focus().setImage({
+      src: asset.url,
+      alt: asset.titre || asset.fileName,
+    }).run()
+  } else {
+    editor.chain().focus().insertContent({
+      type: 'text',
+      marks: [
+        {
+          type: 'link',
+          attrs: {
+            href: asset.url,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+          },
+        },
+      ],
+      text: asset.titre || asset.fileName,
+    }).run()
   }
+}
 
   // Sync si valeur externe change
   useEffect(() => {

@@ -62,9 +62,12 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
   }
 
   // Filtre par type selon le mode
-  const filtered = mode === 'illustration'
-    ? assets.filter((a) => a.contentType.startsWith('image/'))
-    : assets
+ const filtered = mode === 'illustration'
+  ? assets.filter((a) =>
+      a.contentType.startsWith('image/') ||
+      a.contentType.includes('svg')
+    )
+  : assets
 
   return (
     <div
@@ -188,9 +191,11 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
                       ) : (
-                        <span style={{ fontSize: 32 }}>
-                          {asset.contentType.includes('pdf') ? '📄' : '📎'}
-                        </span>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ fontSize: 32 }}>
+                            {asset.contentType.includes('pdf') ? '📄' : '📎'}
+                          </span>
+                        </div>
                       )}
                     </div>
                       {/* Infos */}
@@ -239,7 +244,7 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                   {uploading ? '⏳ Upload en cours...' : '📁 Choisir un fichier'}
                   <input
                     type="file"
-                    accept={mode === 'illustration' ? 'image/*' : '*/*'}
+                    accept={mode === 'illustration' ? 'image/*,.svg' : 'image/*,.svg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv'}
                     onChange={handleUpload}
                     disabled={uploading}
                     style={{ display: 'none' }}

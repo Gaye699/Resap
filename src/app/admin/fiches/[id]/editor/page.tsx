@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 import { EditorProvider } from '@/components/admin/editor/EditorContext'
 import { EditorToolbar } from '@/components/admin/editor/EditorToolbar'
 import { InspectorPanel } from '@/components/admin/editor/InspectorPanel'
-import { FicheEditorView } from './FicheEditorView'
 import {
   getFicheById,
   updateFicheInContentful,
@@ -14,6 +13,7 @@ import {
   publishFiche,
   unpublishFiche,
 } from '@/services/contentful-management'
+import { FicheEditorView } from './FicheEditorView'
 
 export default function FicheEditorPage() {
   const params = useParams()
@@ -51,11 +51,6 @@ export default function FicheEditorPage() {
   }, [id])
 
 const handleSave = useCallback(async (values: Record<string, any>) => {
-  // DEBUG temporaire — vérifie dans la console que les IDs arrivent
-  console.log('outilsIds à sauvegarder:', values.outilsIds)
-  console.log('patientsIds à sauvegarder:', values.patientsIds)
-  console.log('pourEnSavoirPlusIds à sauvegarder:', values.pourEnSavoirPlusIds)
-
   await updateFicheInContentful(id, {
     titre: values.titre,
     categorie: values.categorie,
@@ -78,16 +73,18 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
   setTitre(values.titre ?? titre)
 }, [id, titre])
 
-  const handlePublish = useCallback(async () => {
+ const handlePublish = useCallback(async (): Promise<'published' | 'draft'> => {
     if (isPublished) {
       await unpublishFiche(id)
       toast.success('Fiche dépubliée.')
       setIsPublished(false)
-    } else {
-      await publishFiche(id)
-      toast.success('Fiche publiée sur le site !')
-      setIsPublished(true)
+      return 'draft'
     }
+
+    await publishFiche(id)
+    toast.success('Fiche publiée sur le site !')
+    setIsPublished(true)
+    return 'published'
   }, [id, isPublished])
 
   if (loading) {
@@ -95,7 +92,8 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent
-            rounded-full animate-spin mx-auto mb-3" />
+            rounded-full animate-spin mx-auto mb-3"
+          />
           <p className="text-sm text-gray-500">Chargement de la fiche...</p>
         </div>
       </div>
@@ -130,7 +128,8 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
             flexDirection: 'column',
             overflow: 'hidden',
             flexShrink: 0,
-          }}>
+          }}
+          >
             <InspectorPanel />
           </div>
 

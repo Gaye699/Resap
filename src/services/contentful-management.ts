@@ -1,5 +1,6 @@
 'use server'
 
+import { createClient as createDeliveryClient } from 'contentful'
 import { createClient } from 'contentful-management'
 import { richTextFromMarkdown } from '@contentful/rich-text-from-markdown'
 
@@ -383,30 +384,41 @@ export const createLienAndLinkToFiche = async (
 
 export const listFiches = async () => {
   const environment = await getEnvironment()
+
   const entries = await environment.getEntries({
     content_type: 'fiche',
     limit: 1000,
   })
 
-  return entries.items.map((entry) => {
-    // Récupère l'URL de l'illustration si elle existe
-    const illustrationAsset = entry.fields.illustration as { fr: { fields: { file: { fr: { url: string } } } } } | undefined
-    const rawUrl = illustrationAsset?.fr?.fields?.file?.fr?.url
-    // Contentful renvoie des URLs sans protocole (//images.ctfassets.net/...)
-    const illustrationUrl = rawUrl ? `https:${rawUrl}` : undefined
+  return Promise.all(entries.items.map(async (entry: any) => {
+    let illustrationUrl: string | undefined
+
+    const illustrationId = entry.fields.illustration?.fr?.sys?.id
+
+    if (illustrationId) {
+      try {
+        const asset = await environment.getAsset(illustrationId)
+        const rawUrl = asset.fields.file?.fr?.url as string | undefined
+        if (rawUrl) {
+          illustrationUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
+        }
+      } catch {
+        illustrationUrl = undefined
+      }
+    }
 
     return {
       id: entry.sys.id,
-      titre: (entry.fields.titre as { fr: string })?.fr ?? '',
-      slug: (entry.fields.slug as { fr: string })?.fr ?? '',
-      categorie: (entry.fields.categorie as { fr: string })?.fr ?? '',
+      titre: (entry.fields.titre as { fr: string } | undefined)?.fr ?? '',
+      slug: (entry.fields.slug as { fr: string } | undefined)?.fr ?? '',
+      categorie: (entry.fields.categorie as { fr: string } | undefined)?.fr ?? '',
       tags: (entry.fields.tags as { fr: string[] } | undefined)?.fr ?? [],
       illustrationUrl,
-      statut: entry.sys.publishedAt ? 'published' : 'draft' as const,
+      statut: entry.sys.publishedAt ? 'published' as const : 'draft' as const,
       updatedAt: entry.sys.updatedAt,
       contentfulUrl: `https://app.contentful.com/spaces/${CONTENTFUL_SPACE_ID}/environments/${process.env.CONTENTFUL_ENVIRONMENT ?? 'master'}/entries/${entry.sys.id}`,
     }
-  })
+  }))
 }
 
 export const getFicheById = async (id: string) => {
@@ -442,9 +454,13 @@ export const getFicheById = async (id: string) => {
     illustrationId = illustrationField.fr.sys.id
     try {
       const asset = await environment.getAsset(illustrationId)
-      const rawUrl = asset.fields.file?.fr?.url as string | undefined
-      illustrationUrl = rawUrl ? `https:${rawUrl}` : undefined
+      const rawUrl = (asset.fields.file as any)?.fr?.url as string | undefined
+      if (rawUrl) {
+        // Gère les URLs commençant par // ou déjà complètes
+        illustrationUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
+      }
     } catch {
+      // L'asset n'existe peut-être pas dans l'env dev
       illustrationUrl = undefined
     }
   }
