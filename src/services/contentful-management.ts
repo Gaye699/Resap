@@ -290,18 +290,32 @@ export const createLienInContentful = async (data: CreateLienData) => {
 }
 
 export const updateFicheLiens = async (
-  id: string,
-  data: Partial<CreateLienData>,
+  ficheId: string,
+  {
+    outils,
+    patients,
+    pourEnSavoirPlus,
+  }: {
+    outils: string[]
+    patients: string[]
+    pourEnSavoirPlus: string[]
+  },
 ): Promise<void> => {
   const environment = await getEnvironment()
-  const entry = await environment.getEntry(id)
+  const entry = await environment.getEntry(ficheId)
 
-  if (data.titre !== undefined) entry.fields.titre = { fr: data.titre }
-  if (data.url !== undefined) {
-    entry.fields.url = { fr: data.url }
-    // Si on met une URL, on retire le fichier (choix exclusif)
-    delete entry.fields.fichier
-  }
+  const toLinks = (ids: string[]) =>
+    ids.map((id) => ({
+      sys: {
+        type: 'Link' as const,
+        linkType: 'Entry' as const,
+        id,
+      },
+    }))
+
+  entry.fields.outils = { fr: toLinks(outils) }
+  entry.fields.patients = { fr: toLinks(patients) }
+  entry.fields.pourEnSavoirPlus = { fr: toLinks(pourEnSavoirPlus) }
 
   await entry.update()
 }
