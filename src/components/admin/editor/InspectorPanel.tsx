@@ -7,9 +7,10 @@ import { SelectField } from './fields/SelectField'
 import { CheckboxGroupField } from './fields/CheckboxGroupField'
 import { RichTextEditor } from './RichTextEditor'
 import { LiensPicker } from './LiensPicker'
+import { IllustrationField } from './fields/IllustrationField'
 
 export function InspectorPanel() {
-  const { selectedField, values, updateValue, clearSelection } = useEditor()
+  const { selectedField, values, updateValue, clearSelection, ficheId } = useEditor()
 
   if (!selectedField) {
     return (
@@ -105,6 +106,29 @@ export function InspectorPanel() {
             onChange={handleChange}
           />
         )}
+
+        {selectedField.type === 'image' && (
+        <IllustrationField
+          ficheId={ficheId}
+          value={value ?? ''}
+          onChange={handleChange}
+        />
+        )}
+
+        {selectedField.type === 'liens' && (
+        <LiensPicker
+          titre={selectedField.label}
+          selectedIds={value ?? []}
+          onChange={handleChange}
+          ficheId={ficheId}
+          bloc={
+            selectedField.key === 'outilsIds' ? 'outils'
+            : selectedField.key === 'patientsIds' ? 'patients'
+            : 'pourEnSavoirPlus'
+          }
+        />
+        )}
+
       </div>
     </div>
   )

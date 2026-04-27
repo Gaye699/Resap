@@ -116,7 +116,7 @@ export function EditorToolbar({ titre, backHref }: Props) {
           padding: '6px 14px',
           borderRadius: 6,
           border: 'none',
-          background: isSaving ? '#374151' : '#16a34a',
+          background: isSaving ? '#374151' : isPublished ? '#d97706' : '#16a34a',
           color: 'white',
           cursor: isSaving ? 'not-allowed' : 'pointer',
           transition: 'background 0.15s',
@@ -124,7 +124,7 @@ export function EditorToolbar({ titre, backHref }: Props) {
         onMouseEnter={(e) => { if (!isSaving) e.currentTarget.style.background = '#15803d' }}
         onMouseLeave={(e) => { if (!isSaving) e.currentTarget.style.background = '#16a34a' }}
       >
-        Publier sur le site
+        {isPublished ? 'Dépublier' : 'Publier sur le site'}
       </button>
     </div>
   )

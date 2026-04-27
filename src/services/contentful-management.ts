@@ -289,7 +289,7 @@ export const createLienInContentful = async (data: CreateLienData) => {
   return { id: entry.sys.id }
 }
 
-export const updateLienInContentful = async (
+export const updateFicheLiens = async (
   id: string,
   data: Partial<CreateLienData>,
 ): Promise<void> => {
@@ -399,21 +399,40 @@ export const getFicheById = async (id: string) => {
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
 
-  // Pour les champs rich text, on récupère juste le texte brut pour l'édition
-  // Le rendu HTML est géré par le site public, pas l'admin
-  const extractPlainText = (richTextDoc: any): string => {
-    if (!richTextDoc?.content) return ''
-    return richTextDoc.content
-      .flatMap((node: any) => node.content ?? [])
-      .filter((n: any) => n.nodeType === 'text')
-      .map((n: any) => n.value)
-      .join('\n')
+  const extractRichText = (doc: any): string => {
+    if (!doc?.content) return ''
+    const walk = (nodes: any[]): string =>
+      nodes.map((n) => {
+        if (n.nodeType === 'text') return n.value ?? ''
+        if (n.content) return walk(n.content)
+        return ''
+      }).join('\n')
+    return walk(doc.content)
   }
 
-  const extractLienIds = (field: unknown): string[] => {
-  if (!field || typeof field !== 'object') return []
-  const obj = field as { fr?: Array<{ sys: { id: string } }> }
-  return (obj.fr ?? []).map((l) => l.sys.id)
+  // Extrait les IDs des entries liées (liens)
+  const extractEntryIds = (field: unknown): string[] => {
+    if (!field || typeof field !== 'object') return []
+    const obj = field as { fr?: Array<{ sys?: { id: string } }> }
+    return (obj.fr ?? []).map((l) => l.sys?.id ?? '').filter(Boolean)
+  }
+
+  let illustrationUrl: string | undefined
+  let illustrationId: string | undefined
+
+  const illustrationField = entry.fields.illustration as
+    | { fr: { sys: { id: string } } }
+    | undefined
+
+  if (illustrationField?.fr?.sys?.id) {
+    illustrationId = illustrationField.fr.sys.id
+    try {
+      const asset = await environment.getAsset(illustrationId)
+      const rawUrl = asset.fields.file?.fr?.url as string | undefined
+      illustrationUrl = rawUrl ? `https:${rawUrl}` : undefined
+    } catch {
+      illustrationUrl = undefined
+    }
   }
 
   return {
@@ -423,14 +442,17 @@ export const getFicheById = async (id: string) => {
     categorie: (entry.fields.categorie as { fr: string })?.fr ?? '',
     tags: (entry.fields.tags as { fr: string[] } | undefined)?.fr ?? [],
     description: (entry.fields.description as { fr: string } | undefined)?.fr ?? '',
-    resume: extractPlainText((entry.fields.resume as { fr: any } | undefined)?.fr),
-    contenu: extractPlainText((entry.fields.contenu as { fr: any } | undefined)?.fr),
+    resume: extractRichText((entry.fields.resume as { fr: any } | undefined)?.fr),
+    contenu: extractRichText((entry.fields.contenu as { fr: any } | undefined)?.fr),
     typeDispositif: (entry.fields.typeDispositif as { fr: string[] } | undefined)?.fr ?? [],
-    illustrationId: (entry.fields.illustration as { fr: { sys: { id: string } } } | undefined)?.fr?.sys?.id,
+    illustrationUrl,
+    illustrationId,
+    // Liens associés (IDs)
+    outilsIds: extractEntryIds(entry.fields.outils),
+    patientsIds: extractEntryIds(entry.fields.patients),
+    pourEnSavoirPlusIds: extractEntryIds(entry.fields.pourEnSavoirPlus),
     statut: entry.sys.publishedAt ? 'published' : 'draft' as const,
-    outilsIds: extractLienIds(entry.fields.outils),
-    patientsIds: extractLienIds(entry.fields.patients),
-    pourEnSavoirPlusIds: extractLienIds(entry.fields.pourEnSavoirPlus),
+    updatedAt: entry.sys.updatedAt,
   }
 }
 
@@ -638,4 +660,55 @@ export const setFicheIllustration = async (
   }
 
   await entry.update()
+}
+
+// Crée une fiche avec des valeurs minimales obligatoires
+export const createFicheVide = async (): Promise<{ id: string }> => {
+  const environment = await getEnvironment()
+
+  const entry = await environment.createEntry('fiche', {
+    fields: {
+      titre: { fr: 'Nouvelle fiche (brouillon)' },
+      slug: { fr: `nouvelle-fiche-${Date.now()}` },
+      categorie: { fr: 'sante' },
+      // description obligatoire dans Contentful
+      description: { fr: 'À compléter...' },
+      // resume obligatoire
+      resume: {
+        fr: {
+          nodeType: 'document',
+          data: {},
+          content: [{
+            nodeType: 'paragraph',
+            data: {},
+            content: [{ nodeType: 'text', value: 'À rédiger...', marks: [], data: {} }],
+          }],
+        },
+      },
+      // contenu obligatoire
+      contenu: {
+        fr: {
+          nodeType: 'document',
+          data: {},
+          content: [{
+            nodeType: 'paragraph',
+            data: {},
+            content: [{ nodeType: 'text', value: '', marks: [], data: {} }],
+          }],
+        },
+      },
+      tags: { fr: [] },
+      typeDispositif: { fr: [] },
+    },
+  })
+
+  return { id: entry.sys.id }
+}
+
+export const unpublishFiche = async (id: string): Promise<void> => {
+  const environment = await getEnvironment()
+  const entry = await environment.getEntry(id)
+  if (entry.sys.publishedAt) {
+    await entry.unpublish()
+  }
 }

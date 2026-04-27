@@ -1,9 +1,3 @@
-// src/components/admin/editor/EditorContext.tsx
-// Cœur du système d'édition inline.
-// Ce contexte est partagé entre toutes les zones éditables et le panneau latéral.
-// Quand l'utilisateur clique sur une zone, on met à jour selectedField.
-// Quand il modifie une valeur dans le panneau, on met à jour values.
-// Les deux composants se synchronisent via ce contexte.
 
 'use client'
 
@@ -36,33 +30,22 @@ export type FieldDefinition = {
 type EditorValues = Record<string, any>
 
 type EditorContextType = {
-  // Champ actuellement sélectionné (null = rien de sélectionné)
   selectedField: FieldDefinition | null
-  // Toutes les valeurs éditées (état "live" de la page)
   values: EditorValues
-  // Valeurs originales (pour détecter les changements non sauvegardés)
+  ficheId: string
   originalValues: EditorValues
-  // true si des modifications n'ont pas encore été sauvegardées
   isDirty: boolean
-  // true pendant la sauvegarde
   isSaving: boolean
-  // true si la resource est publiée
   isPublished: boolean
-  // Sélectionne un champ (appelé par EditableField au clic)
   selectField: (field: FieldDefinition) => void
-  // Désélectionne le champ actuel (clic en dehors)
   clearSelection: () => void
-  // Met à jour la valeur d'un champ (appelé par InspectorPanel)
   updateValue: (key: string, value: any) => void
-  // Sauvegarde en brouillon (appelé par EditorToolbar)
   save: () => Promise<void>
-  // Publie (appelé par EditorToolbar)
   publish: () => Promise<void>
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
 
-// Hook pour consommer le contexte — lance une erreur claire si mal utilisé
 export function useEditor() {
   const ctx = useContext(EditorContext)
   if (!ctx) throw new Error('useEditor must be used inside EditorProvider')
@@ -71,18 +54,17 @@ export function useEditor() {
 
 type EditorProviderProps = {
   children: ReactNode
-  // Valeurs initiales chargées depuis Contentful
   initialValues: EditorValues
+  ficheId: string
   isPublished: boolean
-  // Fonction de sauvegarde — reçoit les valeurs modifiées
   onSave: (values: EditorValues) => Promise<void>
-  // Fonction de publication
   onPublish: () => Promise<void>
 }
 
 export function EditorProvider({
   children,
   initialValues,
+  ficheId,
   isPublished: initialIsPublished,
   onSave,
   onPublish,
@@ -93,7 +75,6 @@ export function EditorProvider({
   const [isSaving, setIsSaving] = useState(false)
   const [isPublished, setIsPublished] = useState(initialIsPublished)
 
-  // isDirty = true si au moins une valeur a changé par rapport aux originales
   const isDirty = useMemo(
     () => Object.keys(values).some((key) => values[key] !== originalValues[key]),
     [values, originalValues],
@@ -115,7 +96,6 @@ export function EditorProvider({
     setIsSaving(true)
     try {
       await onSave(values)
-      // Après sauvegarde réussie, l'entry repasse en draft si elle était publiée
       setIsPublished(false)
     } finally {
       setIsSaving(false)
@@ -138,6 +118,7 @@ export function EditorProvider({
     () => ({
       selectedField,
       values,
+      ficheId,
       originalValues,
       isDirty,
       isSaving,
@@ -149,7 +130,7 @@ export function EditorProvider({
       publish,
     }),
     [selectedField, values, originalValues, isDirty, isSaving, isPublished,
-      selectField, clearSelection, updateValue, save, publish],
+      selectField, clearSelection, updateValue, ficheId, save, publish],
   )
 
   return (

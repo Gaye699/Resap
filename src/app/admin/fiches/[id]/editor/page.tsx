@@ -38,7 +38,6 @@ export default function FicheEditorPage() {
         typeDispositif: fiche.typeDispositif,
         illustrationUrl: fiche.illustrationUrl ?? '',
         illustrationId: fiche.illustrationId ?? '',
-        // ← Ces 3 champs étaient manquants = cause du bug
         outilsIds: fiche.outilsIds,
         patientsIds: fiche.patientsIds,
         pourEnSavoirPlusIds: fiche.pourEnSavoirPlusIds,
@@ -92,8 +91,7 @@ export default function FicheEditorPage() {
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent
-            rounded-full animate-spin mx-auto mb-3" 
-          />
+            rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Chargement de la fiche...</p>
         </div>
       </div>
@@ -103,6 +101,7 @@ export default function FicheEditorPage() {
   return (
     <EditorProvider
       initialValues={initialValues}
+      ficheId={id}
       isPublished={isPublished}
       onSave={handleSave}
       onPublish={handlePublish}
@@ -127,8 +126,7 @@ export default function FicheEditorPage() {
             flexDirection: 'column',
             overflow: 'hidden',
             flexShrink: 0,
-          }}
-          >
+          }}>
             <InspectorPanel />
           </div>
 
