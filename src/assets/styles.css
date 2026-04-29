@@ -86,3 +86,10 @@ html, body, #__next {
 .ProseMirror h1 { font-size: 1.75rem; font-weight: 700; margin: 1.2rem 0 0.6rem; }
 .ProseMirror h2 { font-size: 1.4rem; font-weight: 600; margin: 1rem 0 0.5rem; }
 .ProseMirror h3 { font-size: 1.15rem; font-weight: 600; margin: 0.8rem 0 0.4rem; }
+
+/* Désactive tous les liens dans la preview de l'éditeur admin */
+[style*="--preview-mode"] a,
+[style*="--preview-mode"] button[data-nav] {
+  pointer-events: none;
+  cursor: default;
+}
