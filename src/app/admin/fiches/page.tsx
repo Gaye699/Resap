@@ -13,7 +13,8 @@ import {
 import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
 import { useTableFilters } from '@/hooks/useTableFilters'
-import { PencilIcon, DocumentIcon, CheckIcon, CircleIcon, ExternalLinkIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
+import { PencilIcon, CheckIcon, CircleIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
+import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal'
 
 type Fiche = Awaited<ReturnType<typeof listFiches>>[number]
 
@@ -34,6 +35,7 @@ export default function AdminFichesPage() {
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
   const [view, setView] = useState<View>('table')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const charger = async () => {
     setLoading(true)
@@ -64,12 +66,13 @@ export default function AdminFichesPage() {
   })
 
   const handleDeleteOne = async (id: string) => {
-    if (!window.confirm('Supprimer cette fiche définitivement ?')) return
     try {
       await deleteFiche(id)
       toast.success('Fiche supprimée.')
       charger()
-    } catch { toast.error('Erreur.') }
+    } catch {
+      toast.error('Erreur.')
+    }
   }
 
   const handleTogglePublish = async (fiche: Fiche) => {
@@ -89,7 +92,6 @@ export default function AdminFichesPage() {
   }
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Supprimer ${selectedIds.size} fiche(s) définitivement ?`)) return
     setIsProcessing(true)
     try {
       await Promise.all([...selectedIds].map(deleteFiche))
@@ -254,7 +256,7 @@ export default function AdminFichesPage() {
                   <ActionMenu
                     actions={[
                     {
-                      label: 'Modifier',
+                      label: 'Editeur visuel',
                       icon: <PencilIcon className="w-4 h-4" />,
                       onClick: () => router.push(`/admin/fiches/${fiche.id}/editor`),
                     },
@@ -263,24 +265,18 @@ export default function AdminFichesPage() {
                       icon: fiche.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
                       onClick: () => handleTogglePublish(fiche),
                     },
-
-                    {
-                      label: 'Voir sur le site',
-                      icon: <ExternalLinkIcon className="w-4 h-4" />,
-                      onClick: () => window.open(`https://www.resap.fr/fiches/${fiche.categorie}/${fiche.slug}`, '_blank'),
-                    },
                     {
                       label: 'Supprimer',
                       icon: <TrashIcon className="w-4 h-4" />,
                       variant: 'danger',
                       divider: true,
-                      onClick: () => handleDeleteOne(fiche.id),
+                      onClick: () => setDeleteTarget(fiche.id),
                     },
                   ]}
                   />
                 </div>
 
-                {/* Illustration (si disponible) */}
+                {/* Illustration */}
                 <div
                   className="rounded-t-xl overflow-hidden"
                   style={{
@@ -399,7 +395,6 @@ export default function AdminFichesPage() {
                       <ActionMenu
                         actions={[
                         { label: 'Éditeur visuel', icon: <PencilIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/editor`) },
-                        { label: 'Modifier', icon: <DocumentIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/modifier`) },
                         { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: <CheckIcon className="w-4 h-4" />, onClick: () => handleTogglePublish(f) },
                         { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => handleDeleteOne(f.id) },
                       ]}
@@ -453,6 +448,16 @@ export default function AdminFichesPage() {
       </div>
 
       <BulkBar count={selectedIds.size} onDelete={handleBulkDelete} onClear={clearSelection} isProcessing={isProcessing} />
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          nom={data.find((f) => f.id === deleteTarget)?.titre ?? ''}
+          onConfirm={async () => {
+            await handleDeleteOne(deleteTarget!)
+            setDeleteTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }

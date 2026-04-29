@@ -105,12 +105,6 @@ export default function ModifierStructurePage() {
           >
             {isPublished ? '● Publié' : '○ Brouillon'}
           </span>
-          <Link
-            href={`/admin/structures/${id}/editor`}
-            className="text-xs px-3 py-1 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200"
-          >
-            ✏️ Éditeur visuel
-          </Link>
         </div>
       </div>
 

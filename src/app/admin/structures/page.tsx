@@ -13,7 +13,7 @@ import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
 import { useTableFilters } from '@/hooks/useTableFilters'
 import { types } from '@/data/structures_types'
-import { PencilIcon, DocumentIcon, CheckIcon, CircleIcon, ExternalLinkIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
+import { CheckIcon, CircleIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
 
 type Structure = Awaited<ReturnType<typeof listStructures>>[number]
 
@@ -317,12 +317,7 @@ export default function AdminStructuresPage() {
                 <td className="px-4 py-3 text-right">
                   <ActionMenu actions={[
                     {
-                      label: 'Éditeur visuel',
-                      icon: <PencilIcon className="w-4 h-4" />,
-                      onClick: () => router.push(`/admin/structures/${s.id}/editor`),
-                    },
-                    {
-                      label: 'Modifier (formulaire)',
+                      label: 'Modifier',
                       icon: '📝',
                       onClick: () => router.push(`/admin/structures/${s.id}/modifier`),
                     },
@@ -330,11 +325,6 @@ export default function AdminStructuresPage() {
                       label: s.statut === 'published' ? 'Dépublier' : 'Publier',
                       icon: s.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
                       onClick: () => handlePublishOne(s.id),
-                    },
-                    {
-                      label: 'Ouvrir dans Contentful',
-                      icon: <ExternalLinkIcon className="w-4 h-4" />,
-                      onClick: () => window.open(s.contentfulUrl, '_blank'),
                     },
                     {
                       label: 'Supprimer',

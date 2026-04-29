@@ -45,9 +45,16 @@ export default function StructureEditorPage() {
     toast.success('Structure sauvegardée en brouillon.')
   }, [id])
 
-  const handlePublish = useCallback(async () => {
+  const handlePublish = useCallback(async (): Promise<'published' | 'draft'> => {
+    if (isPublished) {
+      // si vous voulez supporter la dépublication, il faut aussi importer unpublishStructure
+      // sinon au minimum retourner 'published' après publishStructure
+    }
+
     await publishStructure(id)
     toast.success('Structure publiée !')
+    setIsPublished(true)
+    return 'published'
   }, [id])
 
   if (loading) {
