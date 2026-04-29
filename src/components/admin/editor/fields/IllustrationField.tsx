@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { AssetPicker } from '../AssetPicker'
-import { setFicheIllustration } from '@/services/contentful-management'
 import toast from 'react-hot-toast'
+
+import { setFicheIllustration } from '@/services/contentful-management'
+import { AssetPicker } from '../AssetPicker'
 
 type Props = {
   ficheId: string
-  value: string          // URL de l'illustration actuelle
+  value: string
   onChange: (url: string) => void
 }
 
@@ -25,7 +26,7 @@ export function IllustrationField({ ficheId, value, onChange }: Props) {
       // Met à jour la preview en temps réel
       onChange(asset.url)
       toast.success('Illustration mise à jour.')
-    } catch (e) {
+    } catch {
       toast.error('Erreur lors de la mise à jour de l\'illustration.')
     } finally {
       setSaving(false)

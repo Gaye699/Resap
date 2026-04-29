@@ -1,8 +1,11 @@
 'use server'
 
-import { createClient as createDeliveryClient } from 'contentful'
 import { createClient } from 'contentful-management'
 import { richTextFromMarkdown } from '@contentful/rich-text-from-markdown'
+import { documentToHtmlString, Options } from '@contentful/rich-text-html-renderer'
+import { BLOCKS, INLINES, MARKS, Document } from '@contentful/rich-text-types'
+import { unified } from 'unified'
+import rehypeParse from 'rehype-parse'
 
 const { CONTENTFUL_SPACE_ID, CONTENTFUL_MANAGEMENT_API_ACCESS_TOKEN } = process.env
 
@@ -398,6 +401,7 @@ export const listFiches = async () => {
     if (illustrationId) {
       try {
         const asset = await environment.getAsset(illustrationId)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rawUrl = asset.fields.file?.fr?.url as string | undefined
         if (rawUrl) {
           illustrationUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
@@ -421,21 +425,123 @@ export const listFiches = async () => {
   }))
 }
 
+type ResolvedAsset = {
+  id: string
+  title: string
+  url: string
+  contentType: string
+}
+
+const collectEmbeddedAssetIds = (node: any, ids = new Set<string>()) => {
+  if (!node || typeof node !== 'object') return ids
+
+  if (node.nodeType === BLOCKS.EMBEDDED_ASSET) {
+    const id = node?.data?.target?.sys?.id
+    if (id) ids.add(id)
+  }
+
+  if (Array.isArray(node.content)) {
+    node.content.forEach((child: any) => collectEmbeddedAssetIds(child, ids))
+  }
+
+  return ids
+}
+
+const convertContentfulRichTextToHtml = (
+  content: Document,
+  resolvedAssets: Record<string, ResolvedAsset> = {},
+): string => {
+  const attr = (value: string) => `"${value.replace(/"/g, '&quot;')}"`
+
+  const options: Options = {
+    renderNode: {
+      [BLOCKS.EMBEDDED_ASSET]: (node: any) => {
+        const targetId = node?.data?.target?.sys?.id
+        const directFields = node?.data?.target?.fields
+        const resolved = targetId ? resolvedAssets[targetId] : undefined
+
+        const title = directFields?.title?.fr
+          ?? directFields?.title
+          ?? resolved?.title
+          ?? 'Asset'
+
+        const file = directFields?.file?.fr
+          ?? directFields?.file
+          ?? (resolved ? {
+            url: resolved.url,
+            contentType: resolved.contentType,
+          } : undefined)
+
+        if (!file?.url || !targetId) return ''
+
+        const url = String(file.url).startsWith('//') ? `https:${file.url}` : file.url
+        const contentType = file.contentType ?? ''
+
+        if (contentType.includes('image') || contentType.includes('svg')) {
+          return `<img src=${attr(url)} alt=${attr(title)} data-asset-id=${attr(targetId)} class="rounded-sm" />`
+        }
+
+        return `
+          <a href=${attr(url)} target="_blank" rel="noopener noreferrer">
+            ${title}
+          </a>
+        `
+      },
+    },
+  }
+
+  return documentToHtmlString(content, options)
+}
+
 export const getFicheById = async (id: string) => {
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
 
-  const extractRichText = (doc: any): string => {
-    if (!doc?.content) return ''
-    const walk = (nodes: any[]): string =>
-      nodes.map((n) => {
-        if (n.nodeType === 'text') return n.value ?? ''
-        if (n.content) return walk(n.content)
-        return ''
-      }).join('\n')
-    return walk(doc.content)
+  const resumeDoc = (entry.fields.resume as { fr: Document } | undefined)?.fr ?? {
+    nodeType: 'document',
+    data: {},
+    content: [],
   }
 
+  const contenuDoc = (entry.fields.contenu as { fr: Document } | undefined)?.fr ?? {
+    nodeType: 'document',
+    data: {},
+    content: [],
+  }
+
+  const embeddedAssetIds = [
+    ...collectEmbeddedAssetIds(resumeDoc),
+    ...collectEmbeddedAssetIds(contenuDoc),
+  ]
+
+  const resolvedAssetsEntries = await Promise.all(
+    [...new Set(embeddedAssetIds)].map(async (assetId) => {
+      try {
+        const asset = await environment.getAsset(assetId)
+        const rawUrl = (asset.fields.file as any)?.fr?.url as string | undefined
+        const contentType = (asset.fields.file as any)?.fr?.contentType as string | undefined
+        const title = (asset.fields.title as any)?.fr as string | undefined
+
+        if (!rawUrl || !contentType) return null
+
+        return [
+          assetId,
+          {
+            id: assetId,
+            title: title ?? 'Asset',
+            url: rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl,
+            contentType,
+          },
+        ] as const
+      } catch {
+        return null
+      }
+    }),
+  )
+
+   const resolvedAssets = Object.fromEntries(
+    resolvedAssetsEntries.filter(Boolean) as Array<readonly [string, ResolvedAsset]>,
+  )
   // Extrait les IDs des entries liées (liens)
   const extractEntryIds = (field: unknown): string[] => {
     if (!field || typeof field !== 'object') return []
@@ -472,8 +578,8 @@ export const getFicheById = async (id: string) => {
     categorie: (entry.fields.categorie as { fr: string })?.fr ?? '',
     tags: (entry.fields.tags as { fr: string[] } | undefined)?.fr ?? [],
     description: (entry.fields.description as { fr: string } | undefined)?.fr ?? '',
-    resume: extractRichText((entry.fields.resume as { fr: any } | undefined)?.fr),
-    contenu: extractRichText((entry.fields.contenu as { fr: any } | undefined)?.fr),
+    resume: convertContentfulRichTextToHtml(resumeDoc, resolvedAssets),
+    contenu: convertContentfulRichTextToHtml(contenuDoc, resolvedAssets),
     typeDispositif: (entry.fields.typeDispositif as { fr: string[] } | undefined)?.fr ?? [],
     illustrationUrl,
     illustrationId,
@@ -528,6 +634,192 @@ export const createFicheInContentful = async (data: CreateFicheData) => {
   return { id: entry.sys.id }
 }
 
+type RichTextMark = { type: string }
+
+const textNode = (value: string, marks: RichTextMark[] = []) => ({
+  nodeType: 'text',
+  value,
+  marks,
+  data: {},
+})
+
+const emptyDocument = (): Document => ({
+  nodeType: BLOCKS.DOCUMENT,
+  data: {},
+  content: [],
+})
+
+const htmlToContentfulRichText = (html: string): Document => {
+  if (!html || !html.trim()) return emptyDocument()
+
+  const tree: any = unified()
+    .use(rehypeParse, { fragment: true })
+    .parse(html)
+
+  const markForTag = (tagName: string): RichTextMark[] => {
+    if (tagName === 'strong' || tagName === 'b') return [{ type: MARKS.BOLD }]
+    if (tagName === 'em' || tagName === 'i') return [{ type: MARKS.ITALIC }]
+    if (tagName === 'u') return [{ type: MARKS.UNDERLINE }]
+    if (tagName === 'code') return [{ type: MARKS.CODE }]
+    return []
+  }
+
+  const walkInline = (nodes: any[], inheritedMarks: RichTextMark[] = []): any[] => (
+    nodes.flatMap((node) => {
+      if (node.type === 'text') {
+        return [textNode(node.value ?? '', inheritedMarks)]
+      }
+
+      if (node.type !== 'element') return []
+
+      if (node.tagName === 'a') {
+        return [{
+          nodeType: INLINES.HYPERLINK,
+          data: { uri: node.properties?.href ?? '' },
+          content: walkInline(node.children ?? [], inheritedMarks),
+        }]
+      }
+
+      const nextMarks = [...inheritedMarks, ...markForTag(node.tagName)]
+      return walkInline(node.children ?? [], nextMarks)
+    })
+  )
+
+  const paragraphFromChildren = (children: any[]) => ({
+    nodeType: BLOCKS.PARAGRAPH,
+    data: {},
+    content: walkInline(children),
+  })
+
+  const walkBlocks = (nodes: any[]): any[] => (
+    nodes.flatMap((node) => {
+      if (node.type === 'text') {
+        const value = node.value?.trim?.() ?? ''
+        if (!value) return []
+        return [paragraphFromChildren([node])]
+      }
+
+      if (node.type !== 'element') return []
+
+      if (node.tagName === 'img') {
+        const assetId = node.properties?.['data-asset-id']
+        if (!assetId) return []
+
+        return [{
+          nodeType: BLOCKS.EMBEDDED_ASSET,
+          data: {
+            target: {
+              sys: {
+                type: 'Link',
+                linkType: 'Asset',
+                id: String(assetId),
+              },
+            },
+          },
+          content: [],
+        }]
+      }
+
+      if (node.tagName === 'p') {
+        return [{
+          nodeType: BLOCKS.PARAGRAPH,
+          data: {},
+          content: walkInline(node.children ?? []),
+        }]
+      }
+
+      if (node.tagName === 'h1') {
+        return [{ nodeType: BLOCKS.HEADING_1, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'h2') {
+        return [{ nodeType: BLOCKS.HEADING_2, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'h3') {
+        return [{ nodeType: BLOCKS.HEADING_3, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'h4') {
+        return [{ nodeType: BLOCKS.HEADING_4, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'h5') {
+        return [{ nodeType: BLOCKS.HEADING_5, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'h6') {
+        return [{ nodeType: BLOCKS.HEADING_6, data: {}, content: walkInline(node.children ?? []) }]
+      }
+
+      if (node.tagName === 'blockquote') {
+        return [{
+          nodeType: BLOCKS.QUOTE,
+          data: {},
+          content: (node.children ?? []).flatMap((child: any) => {
+            if (child.tagName === 'p') {
+              return [{
+                nodeType: BLOCKS.PARAGRAPH,
+                data: {},
+                content: walkInline(child.children ?? []),
+              }]
+            }
+            return []
+          }),
+        }]
+      }
+
+      if (node.tagName === 'ul') {
+        return [{
+          nodeType: BLOCKS.UL_LIST,
+          data: {},
+          content: (node.children ?? [])
+            .filter((child: any) => child.tagName === 'li')
+            .map((child: any) => ({
+              nodeType: BLOCKS.LIST_ITEM,
+              data: {},
+              content: [{
+                nodeType: BLOCKS.PARAGRAPH,
+                data: {},
+                content: walkInline(child.children ?? []),
+              }],
+            })),
+        }]
+      }
+
+      if (node.tagName === 'ol') {
+        return [{
+          nodeType: BLOCKS.OL_LIST,
+          data: {},
+          content: (node.children ?? [])
+            .filter((child: any) => child.tagName === 'li')
+            .map((child: any) => ({
+              nodeType: BLOCKS.LIST_ITEM,
+              data: {},
+              content: [{
+                nodeType: BLOCKS.PARAGRAPH,
+                data: {},
+                content: walkInline(child.children ?? []),
+              }],
+            })),
+        }]
+      }
+
+      if (node.tagName === 'hr') {
+        return [{ nodeType: BLOCKS.HR, data: {}, content: [] }]
+      }
+
+      return walkBlocks(node.children ?? [])
+    })
+  )
+
+  return {
+    nodeType: BLOCKS.DOCUMENT,
+    data: {},
+    content: walkBlocks(tree.children ?? []),
+  }
+}
+
 export const updateFicheInContentful = async (
   id: string,
   data: UpdateFicheData,
@@ -541,12 +833,11 @@ export const updateFicheInContentful = async (
   if (data.description !== undefined) entry.fields.description = { fr: data.description }
   if (data.typeDispositif !== undefined) entry.fields.typeDispositif = { fr: data.typeDispositif }
 
-  // Conversion Markdown → Rich Text Contentful
   if (data.resume !== undefined) {
-    entry.fields.resume = { fr: await richTextFromMarkdown(data.resume) }
+    entry.fields.resume = { fr: htmlToContentfulRichText(data.resume) }
   }
   if (data.contenu !== undefined) {
-    entry.fields.contenu = { fr: await richTextFromMarkdown(data.contenu) }
+    entry.fields.contenu = { fr: htmlToContentfulRichText(data.contenu) }
   }
 
   await entry.update()
@@ -605,6 +896,18 @@ export const getStructuresByTypes = async (types: string[]) => {
 
 // ─── ASSETS (illustrations, PDFs) ─────────────────────────────────────────
 
+// Fonction interne : upload les bytes du fichier
+async function uploadFileToContentful(environment: any, file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+
+  const upload = await environment.createUpload({
+    file: Buffer.from(buffer),
+    contentType: file.type,
+  })
+
+  return upload.sys.id
+}
+
 // Upload un fichier local comme Asset Contentful
 // Retourne l'id de l'asset créé
 export const uploadAssetToContentful = async (
@@ -639,18 +942,6 @@ export const uploadAssetToContentful = async (
   const finalUrl = url ? `https:${url}` : ''
 
   return { id: published.sys.id, url: finalUrl }
-}
-
-// Fonction interne : upload les bytes du fichier
-async function uploadFileToContentful(environment: any, file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-
-  const upload = await environment.createUpload({
-    file: Buffer.from(buffer),
-    contentType: file.type,
-  })
-
-  return upload.sys.id
 }
 
 // Liste tous les assets existants (pour le picker d'assets dans l'éditeur)

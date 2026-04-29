@@ -1,7 +1,6 @@
 'use client'
 
 import { Editor } from '@tiptap/react'
-import { useRef } from 'react'
 
 type Props = {
   editor: Editor | null
@@ -52,31 +51,7 @@ function Sep() {
 }
 
 export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   if (!editor) return null
-
-  // Ouvre le sélecteur de fichier pour uploader une image
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const src = ev.target?.result as string
-      if (src) {
-        editor.chain().focus().setImage({ src }).run()
-      }
-    }
-    reader.readAsDataURL(file)
-    // Reset pour permettre de recharger le même fichier
-    e.target.value = ''
-  }
-
-  // Insère une image depuis une URL
-  const handleImageUrl = () => {
-    const url = window.prompt('URL de l\'image :')
-    if (url) editor.chain().focus().setImage({ src: url }).run()
-  }
 
   const handleLink = () => {
     if (editor.isActive('link')) {
@@ -189,9 +164,23 @@ export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
       <Sep />
 
       {/* Alignement */}
-      <Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} isActive={editor.isActive({ textAlign: 'left' })} title="Gauche">⬛</Btn>
-      <Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} isActive={editor.isActive({ textAlign: 'center' })} title="Centre">⊟</Btn>
-      <Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} title="Droite">⬜</Btn>
+      <Btn onClick={() => editor.chain().focus().setTextAlign('left').run()} isActive={editor.isActive({ textAlign: 'left' })} title="Gauche">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3" y="3" width="7" height="18" rx="2" ry="2"/>
+          <rect x="14" y="6" width="7" height="12" rx="2" ry="2"/>
+        </svg>
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().setTextAlign('center').run()} isActive={editor.isActive({ textAlign: 'center' })} title="Centre">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        </svg>
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().setTextAlign('right').run()} isActive={editor.isActive({ textAlign: 'right' })} title="Droite">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="14" y="3" width="7" height="18" rx="2" ry="2"/>
+          <rect x="3" y="6" width="7" height="12" rx="2" ry="2"/>
+        </svg>
+      </Btn>
 
       <Sep />
 
@@ -202,14 +191,6 @@ export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
 
       <Sep />
 
-      {/* Image — 2 options */}
-      <Btn onClick={() => fileInputRef.current?.click()} title="Insérer une image (depuis mon ordinateur)">
-        📁
-      </Btn>
-      <Btn onClick={handleImageUrl} title="Insérer une image (depuis une URL)">
-        🖼
-      </Btn>
-
       <Sep />
       { /* Embed asset Contentful */ }
       {onEmbedAsset && (
@@ -217,18 +198,9 @@ export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
           onClick={onEmbedAsset}
           title="Insérer un asset Contentful (image, PDF...)"
         >
-          + Embed
+          + Integrer
         </Btn>
       )}
-
-      {/* Input file caché */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        style={{ display: 'none' }}
-      />
 
       <Sep />
 
@@ -237,10 +209,6 @@ export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
       <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Ligne de séparation">—</Btn>
 
       <Sep />
-
-      {/* Annuler / Rétablir */}
-      <Btn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Annuler (Ctrl+Z)">↩</Btn>
-      <Btn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Rétablir (Ctrl+Y)">↪</Btn>
     </div>
   )
 }

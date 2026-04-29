@@ -2,6 +2,7 @@
 
 import { useState, useCallback, ChangeEvent } from 'react'
 import { listAssets, uploadAssetToContentful } from '@/services/contentful-management'
+import toast from 'react-hot-toast'
 
 type Asset = { id: string; titre: string; url: string; contentType: string; fileName: string }
 
@@ -53,7 +54,9 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
       const { id, url } = await uploadAssetToContentful(file, file.name.replace(/\.[^.]+$/, ''))
       onSelect({ id, titre: file.name, url, contentType: file.type, fileName: file.name })
     } catch (err) {
-      alert('Erreur lors de l\'upload : ' + (err instanceof Error ? err.message : 'inconnu'))
+      toast.error(err instanceof Error
+        ? `Erreur lors de l'upload : ${err.message}`
+        : 'Erreur lors de l\'upload.')
     } finally {
       setUploading(false)
     }
@@ -69,58 +72,44 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
     )
   : assets
 
+  const isCurrentAsset = (asset: Asset) => {
+    return currentAssetUrl && asset.url === currentAssetUrl
+  }
+
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-      }}
+      className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          width: '100%', maxWidth: 680,
-          maxHeight: '85vh', display: 'flex', flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        className="bg-white rounded-xl w-full max-w-[680px] max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#111827' }}>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="m-0 text-base font-semibold text-gray-900">
             {mode === 'illustration' ? 'Choisir une illustration' : 'Insérer un asset'}
           </h2>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+          <button type="button" onClick={onClose} className="bg-transparent border-none text-lg cursor-pointer text-gray-400 hover:text-gray-600 transition-colors">✕</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #f3f4f6' }}>
+        <div className="flex border-b border-gray-100">
           {[
             { key: 'existing', label: '📁 Assets existants', onClick: handleTabExisting },
             { key: 'upload', label: '⬆️ Uploader un fichier', onClick: () => setTab('upload') },
           ].map(({ key, label, onClick }) => (
             <button
-                type="button"
+              type="button"
               key={key}
               onClick={onClick}
-              style={{
-                padding: '10px 16px',
-                fontSize: 13,
-                border: 'none',
-                cursor: 'pointer',
-                background: tab === key ? '#eff6ff' : 'transparent',
-                color: tab === key ? '#2563eb' : '#6b7280',
-                borderBottom: tab === key ? '2px solid #2563eb' : '2px solid transparent',
-                fontWeight: tab === key ? 500 : 400,
-              }}
+              className={`
+                px-4 py-2.5 text-[13px] border-none cursor-pointer transition-all border-b-2
+                ${tab === key
+                  ? 'bg-blue-50 text-blue-600 border-blue-600 font-medium'
+                  : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700'
+                }
+              `}
             >
               {label}
             </button>
@@ -128,82 +117,65 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
         </div>
 
         {/* Corps */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div className="flex-1 overflow-hidden flex flex-col">
 
           {/* Onglet : assets existants */}
           {tab === 'existing' && (
             <>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid #f9fafb' }}>
+              <div className="px-4 py-3 border-b border-gray-50">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => handleSearch(e.target.value)}
                   placeholder="Rechercher un asset par titre..."
-                  style={{
-                    width: '100%',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: '7px 12px',
-                    fontSize: 13,
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-[7px] text-[13px] outline-none focus:border-blue-500 transition-colors box-border"
                 />
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+              <div className="flex-1 overflow-y-auto p-3">
                 {loading && (
-                  <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: 20 }}>Chargement...</p>
+                  <p className="text-center text-gray-400 text-[13px] p-5">Chargement...</p>
                 )}
 
                 {!loading && filtered.length === 0 && (
-                  <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: 20 }}>
+                  <p className="text-center text-gray-400 text-[13px] p-5">
                     Aucun asset trouvé.
                   </p>
                 )}
 
                 {/* Grille d'assets */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
                   {filtered.map((asset) => (
                     <button
-                    type="button"
+                      type="button"
                       key={asset.id}
                       onClick={() => onSelect(asset)}
-                      style={{
-                        border: '2px solid #e5e7eb',
-                        borderRadius: 8,
-                        background: 'white',
-                        cursor: 'pointer',
-                        padding: 0,
-                        overflow: 'hidden',
-                        textAlign: 'left',
-                        transition: 'border-color 0.1s',
-                      }}
+                      className="border-2 border-gray-200 rounded-lg bg-white cursor-pointer p-0 overflow-hidden text-left transition-colors hover:border-blue-500"
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6' }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb' }}
                     >
                       {/* Aperçu */}
-                      <div style={{ height: 90, background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      <div className="h-[90px] bg-gray-50 flex items-center justify-center overflow-hidden">
                       {asset.contentType.startsWith('image/') && asset.url ? (
-                        <img 
-                          src={asset.url} 
-                          alt={asset.titre} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                        />
+                          <img
+                            src={asset.url}
+                            alt={asset.titre}
+                            className="w-full h-full object-cover"
+                          />
                       ) : (
-                        <div style={{ textAlign: 'center' }}>
-                          <span style={{ fontSize: 32 }}>
+                        <div className="text-center">
+                          <span className="text-3xl">
                             {asset.contentType.includes('pdf') ? '📄' : '📎'}
                           </span>
                         </div>
                       )}
                     </div>
                       {/* Infos */}
-                      <div style={{ padding: '6px 8px' }}>
-                        <p style={{ margin: 0, fontSize: 11, fontWeight: 500, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div className="p-2">
+                        <p className="m-0 text-[11px] font-medium text-gray-700 truncate">
                           {asset.titre || asset.fileName}
                         </p>
-                        <p style={{ margin: '2px 0 0', fontSize: 10, color: '#9ca3af' }}>
+                        <p className="mt-0.5 mb-0 text-[10px] text-gray-400">
                           {asset.contentType.split('/')[1]?.toUpperCase()}
                         </p>
                       </div>
@@ -216,30 +188,23 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
 
           {/* Onglet : upload */}
           {tab === 'upload' && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>⬆️</div>
-                <p style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <div className="text-[48px] mb-4">⬆️</div>
+                <p className="text-sm text-gray-700 mb-2">
                   {mode === 'illustration'
                     ? 'Choisissez une image à uploader (PNG, JPG, SVG...)'
                     : 'Choisissez un fichier à uploader (image, PDF, doc...)'}
                 </p>
-                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>
+                <p className="text-[12px] text-gray-400 mb-5">
                   Le fichier sera uploadé dans Contentful Media et automatiquement sélectionné.
                 </p>
-                <label style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 20px',
-                  background: '#2563eb',
-                  color: 'white',
-                  borderRadius: 8,
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  opacity: uploading ? 0.6 : 1,
-                }}
+                <label
+                  className={`
+                    inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg 
+                    text-sm font-medium transition-all
+                    ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-blue-700'}
+                  `}
                 >
                   {uploading ? '⏳ Upload en cours...' : '📁 Choisir un fichier'}
                   <input
@@ -247,7 +212,7 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                     accept={mode === 'illustration' ? 'image/*,.svg' : 'image/*,.svg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv'}
                     onChange={handleUpload}
                     disabled={uploading}
-                    style={{ display: 'none' }}
+                    className="hidden"
                   />
                 </label>
               </div>

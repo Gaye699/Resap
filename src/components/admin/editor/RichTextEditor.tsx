@@ -9,17 +9,31 @@ import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
 import Color from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
-import { Markdown } from 'tiptap-markdown'
 import { useEffect, useState } from 'react'
 import { RichTextToolbar } from './RichTextToolbar'
 import { AssetPicker } from './AssetPicker'
 
 type Props = {
   value: string
-  onChange: (markdown: string) => void
+  onChange: (html: string) => void
   placeholder?: string
   minHeight?: number
 }
+
+const AssetImage = ImageExtension.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      assetId: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-asset-id'),
+        renderHTML: (attributes) => (
+          attributes.assetId ? { 'data-asset-id': attributes.assetId } : {}
+        ),
+      },
+    }
+  },
+})
 
 export function RichTextEditor({
   value,
@@ -38,31 +52,25 @@ export function RichTextEditor({
       Underline,
       TextStyle,
       Color,
-      ImageExtension.configure({
+      AssetImage.configure({
         inline: true,
         allowBase64: true,
       }),
       LinkExtension.configure({ openOnClick: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder }),
-      Markdown.configure({
-        html: false,
-        transformCopiedText: true,
-        transformPastedText: true,
-      }),
     ],
 
     content: value,
 
     onUpdate: ({ editor: e }) => {
-      const md = (e.storage as any).markdown?.getMarkdown?.() ?? ''
-      onChange(md)
+      onChange(e.getHTML())
     },
 
     editorProps: {
       attributes: {
         class: 'prose max-w-none focus:outline-none',
-        style: `min-height: ${minHeight}px; padding: 16px; font-size: 14px;`,
+        style: `min-height: ${minHeight}px; padding: 16px; height: auto;`,
       },
     },
   })
@@ -79,11 +87,13 @@ export function RichTextEditor({
   if (!editor) return
 
   if (asset.contentType.startsWith('image/')) {
-    // Image 
-    editor.chain().focus().setImage({
-      src: asset.url,
-      alt: asset.titre || asset.fileName,
-    }).run()
+    // Image
+   editor.chain().focus().setImage({
+    src: asset.url,
+    alt: asset.titre || asset.fileName,
+    // @ts-expect-error — data-* non typé par Tiptap mais accepté par le DOM
+    'data-asset-id': asset.id,
+  }).run()
   } else {
     editor.chain().focus().insertContent({
       type: 'text',
@@ -105,32 +115,26 @@ export function RichTextEditor({
   // Sync si valeur externe change
   useEffect(() => {
     if (!editor) return
-    const current = (editor.storage as any).markdown?.getMarkdown?.() ?? ''
+    const current = editor.getHTML()
     if (value !== current) {
-      editor.commands.setContent(value, { emitUpdate: false })
+      editor.commands.setContent(value || '<p></p>', { emitUpdate: false })
     }
   }, [value, editor])
 
   // UI
   return (
-    <div
-      style={{
-        border: '1px solid #e5e7eb',
-        borderRadius: 8,
-        overflow: 'hidden',
-        background: 'white',
-      }}
-    >
-      {/* ✅ Toolbar avec bouton pour ouvrir picker */}
-      <RichTextToolbar
-        editor={editor}
-        onEmbedAsset={() => setShowAssetPicker(true)}
-      />
+    <div className="border border-gray-200 rounded-lg bg-white flex flex-col max-h-[70vh] overflow-hidden">
+      <div className="sticky top-0 z-20 bg-[#fafafa] shrink-0">
+        <RichTextToolbar
+          editor={editor}
+          onEmbedAsset={() => setShowAssetPicker(true)}
+        />
+      </div>
 
-      {/* ✅ Éditeur */}
-      <EditorContent editor={editor} />
+      <div className="overflow-y-auto flex-1">
+        <EditorContent editor={editor} />
+      </div>
 
-      {/* ✅ POPUP ASSET PICKER */}
       {showAssetPicker && (
         <AssetPicker
           mode="embed"
