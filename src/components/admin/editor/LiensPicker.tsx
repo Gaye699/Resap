@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEditor } from './EditorContext'
 import { listLiens, createLienAndLinkToFiche } from '@/services/contentful-management'
 import toast from 'react-hot-toast'
 
@@ -30,8 +31,10 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
   const [newUrl, setNewUrl] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
   // Charge les liens au premier besoin
-  const ensureLoaded = async () => {
+  const ensureLoaded = useCallback(async () => {
     if (loaded) return
     setLoading(true)
     try {
@@ -40,12 +43,18 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Charge dès le montage pour pouvoir afficher les sélectionnés
   useEffect(() => {
     ensureLoaded()
-  }, [])
+  }, [ensureLoaded])
+
+  useEffect(() => {
+    if (mode === 'picker' && searchInputRef.current) {
+      searchInputRef.current.focus()
+    }
+  }, [mode])
 
   const toggle = (id: string) =>
     onChange(
@@ -150,11 +159,9 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
 
       {/* ── Picker liens existants AVEC bouton fermer ── */}
       {mode === 'picker' && (
-        <div className="border border-gray-200 rounded-xl overflow-hidden
-          bg-white shadow-sm">
+        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
           {/* Header avec fermer */}
-          <div className="flex items-center justify-between px-3 py-2
-            border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 bg-gray-50">
             <p className="text-xs font-medium text-gray-600">
               Sélectionner des liens
             </p>
@@ -173,13 +180,13 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
           {/* Recherche */}
           <div className="p-2 border-b border-gray-100">
             <input
+              ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher..."
               className="w-full border border-gray-200 rounded-lg px-3 py-1.5
                 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-              autoFocus
             />
           </div>
           {/* Liste */}
@@ -217,7 +224,8 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
                     lien.statut === 'published'
                       ? 'bg-green-100 text-green-700'
                       : 'bg-yellow-100 text-yellow-700'
-                  }`}>
+                  }`}
+                  >
                     {lien.statut === 'published' ? 'Pub.' : 'Draft'}
                   </span>
                 </label>
@@ -263,7 +271,6 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
             placeholder="Titre du lien *"
             className="w-full border border-gray-200 rounded-lg px-3 py-2
               text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-            autoFocus
           />
           <input
             type="url"

@@ -14,10 +14,11 @@ export function EditableField({ field, children, className = '', as: Tag = 'div'
   const { selectField, selectedField } = useEditor()
   const [hovered, setHovered] = useState(false)
   const isSelected = selectedField?.key === field.key
+  const Component = Tag as React.ElementType
 
   return (
     // @ts-ignore
-    <Tag
+    <Component
       className={className}
       onClick={(e: React.MouseEvent) => { e.stopPropagation(); selectField(field) }}
       onMouseEnter={() => setHovered(true)}
@@ -84,6 +85,6 @@ export function EditableField({ field, children, className = '', as: Tag = 'div'
           ✏️ {field.label}
         </span>
       )}
-    </Tag>
+    </Component>
   )
 }
