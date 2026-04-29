@@ -13,7 +13,7 @@ import {
 export type FieldDefinition = {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'richtext' | 'select' | 'checkboxGroup' | 'image' | 'liens'
+  type: 'text' | 'textarea' | 'richtext' | 'select' | 'checkboxGroup' | 'image' | 'liens' | 'tags'
   options?: { value: string; label: string }[]
   maxLength?: number
   required?: boolean
@@ -35,6 +35,7 @@ type EditorContextType = {
   updateValue: (key: string, value: any) => void
   save: () => Promise<void>
   publish: () => Promise<void>
+  allLiens: Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -52,6 +53,7 @@ type EditorProviderProps = {
   isPublished: boolean
   onSave: (values: EditorValues) => Promise<void>
   onPublish: () => Promise<'published' | 'draft'>
+  allLiens?: Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>
 }
 
 export function EditorProvider({
@@ -61,6 +63,7 @@ export function EditorProvider({
   isPublished: initialIsPublished,
   onSave,
   onPublish,
+  allLiens,
 }: EditorProviderProps) {
   const [selectedField, setSelectedField] = useState<FieldDefinition | null>(null)
   const [values, setValues] = useState<EditorValues>(initialValues)
@@ -119,9 +122,10 @@ export function EditorProvider({
       updateValue,
       save,
       publish,
+      allLiens: allLiens ?? [],
     }),
     [selectedField, values, originalValues, isDirty, isSaving, isPublished,
-      selectField, clearSelection, updateValue, ficheId, save, publish],
+      selectField, clearSelection, updateValue, ficheId, save, publish, allLiens],
   )
 
   return (

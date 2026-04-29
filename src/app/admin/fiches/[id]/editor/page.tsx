@@ -12,6 +12,7 @@ import {
   updateFicheLiens,
   publishFiche,
   unpublishFiche,
+  listLiens,
 } from '@/services/contentful-management'
 import { FicheEditorView } from './FicheEditorView'
 
@@ -24,6 +25,8 @@ export default function FicheEditorPage() {
   const [isPublished, setIsPublished] = useState(false)
   const [titre, setTitre] = useState('Nouvelle fiche')
 
+  const [allLiens, setAllLiens] = useState<Awaited<ReturnType<typeof listLiens>>>([])
+
   useEffect(() => {
     getFicheById(id).then((fiche) => {
       // TOUS les champs passés à l'éditeur
@@ -32,7 +35,7 @@ export default function FicheEditorPage() {
         slug: fiche.slug,
         categorie: fiche.categorie,
         description: fiche.description,
-        tags: fiche.tags.join(', '),
+        tags: fiche.tags ?? [],
         resume: fiche.resume,
         contenu: fiche.contenu,
         typeDispositif: fiche.typeDispositif,
@@ -45,6 +48,7 @@ export default function FicheEditorPage() {
       setIsPublished(fiche.statut === 'published')
       setTitre(fiche.titre)
       setLoading(false)
+      listLiens().then(setAllLiens)
     }).catch(() => {
       toast.error('Impossible de charger la fiche.')
     })
@@ -55,7 +59,7 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
     titre: values.titre,
     categorie: values.categorie,
     description: values.description,
-    tags: (values.tags ?? '').split(',').map((t: string) => t.trim()).filter(Boolean),
+    tags: Array.isArray(values.tags) ? values.tags : [],
     resume: values.resume,
     contenu: values.contenu,
     typeDispositif: values.typeDispositif ?? [],
@@ -108,28 +112,22 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
       onSave={handleSave}
       onPublish={handlePublish}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <div className="flex h-dvh flex-col overflow-hidden">
 
         <EditorToolbar titre={titre} backHref="/admin/fiches" />
 
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
 
-          {/* Preview — exactement comme le site public */}
-          <div style={{ flex: 1, overflowY: 'auto', background: 'white' }}>
+          {/* Preview */}
+          <div className="min-h-0 flex-1 overflow-y-auto bg-white">
             <FicheEditorView ficheId={id} />
           </div>
 
+          <div className="hidden lg:block w-1 cursor-col-resize bg-gray-100 hover:bg-blue-200" />
+          <div className="block lg:hidden h-2 cursor-row-resize bg-gray-100 hover:bg-blue-200" />
+
           {/* Panneau latéral d'édition */}
-          <div style={{
-            width: 360,
-            borderLeft: '1px solid #e5e7eb',
-            background: 'white',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
-          >
+          <div className="resize-y overflow-auto border-t border-gray-200 bg-white min-h-[220px] max-h-[75vh] h-[42vh] lg:resize-x lg:h-auto lg:w-[360px] lg:min-w-[320px] lg:max-w-[640px] lg:border-l lg:border-t-0">
             <InspectorPanel />
           </div>
 
