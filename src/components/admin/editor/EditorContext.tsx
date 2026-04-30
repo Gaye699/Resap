@@ -36,6 +36,8 @@ type EditorContextType = {
   save: () => Promise<void>
   publish: () => Promise<void>
   allLiens: Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>
+  setAllLiens: (liens: Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>) => void
+  liensLoaded: boolean
 }
 
 const EditorContext = createContext<EditorContextType | null>(null)
@@ -54,6 +56,7 @@ type EditorProviderProps = {
   onSave: (values: EditorValues) => Promise<void>
   onPublish: () => Promise<'published' | 'draft'>
   allLiens?: Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>
+  liensLoaded?: boolean
 }
 
 export function EditorProvider({
@@ -63,18 +66,25 @@ export function EditorProvider({
   isPublished: initialIsPublished,
   onSave,
   onPublish,
-  allLiens,
+  allLiens: initialLiens,
+  liensLoaded: initialLiensLoaded,
 }: EditorProviderProps) {
   const [selectedField, setSelectedField] = useState<FieldDefinition | null>(null)
   const [values, setValues] = useState<EditorValues>(initialValues)
-  const [originalValues] = useState<EditorValues>(initialValues)
+  const [originalValues, setOriginalValues] = useState<EditorValues>(initialValues)
   const [isSaving, setIsSaving] = useState(false)
   const [isPublished, setIsPublished] = useState(initialIsPublished)
+  const [allLiens, setAllLiens] = useState<Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>>(initialLiens ?? [])
+  const [liensLoaded] = useState(initialLiensLoaded ?? false)
 
-  const isDirty = useMemo(
-    () => Object.keys(values).some((key) => values[key] !== originalValues[key]),
-    [values, originalValues],
-  )
+  const isDirty = useMemo(() => Object.keys(values).some((key) => {
+      const a = values[key]
+      const b = originalValues[key]
+      if (Array.isArray(a) && Array.isArray(b)) {
+        return JSON.stringify(a) !== JSON.stringify(b)
+      }
+      return a !== b
+    }), [values, originalValues])
 
   const selectField = useCallback((field: FieldDefinition) => {
     setSelectedField(field)
@@ -92,6 +102,7 @@ export function EditorProvider({
     setIsSaving(true)
     try {
       await onSave(values)
+      setOriginalValues({ ...values })
     } finally {
       setIsSaving(false)
     }
@@ -122,10 +133,12 @@ export function EditorProvider({
       updateValue,
       save,
       publish,
-      allLiens: allLiens ?? [],
+      allLiens,
+      setAllLiens,
+      liensLoaded,
     }),
     [selectedField, values, originalValues, isDirty, isSaving, isPublished,
-      selectField, clearSelection, updateValue, ficheId, save, publish, allLiens],
+      selectField, clearSelection, updateValue, ficheId, save, publish, allLiens, liensLoaded],
   )
 
   return (

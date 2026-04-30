@@ -8,9 +8,10 @@ type Props = {
   children: React.ReactNode
   className?: string
   as?: 'div' | 'span' | 'section' | 'article'
+  borderRadius?: number
 }
 
-export function EditableField({ field, children, className = '', as: Tag = 'div' }: Props) {
+export function EditableField({ field, children, className = '', as: Tag = 'div', borderRadius = 4 }: Props) {
   const { selectField, selectedField } = useEditor()
   const [hovered, setHovered] = useState(false)
   const isSelected = selectedField?.key === field.key
@@ -39,7 +40,7 @@ export function EditableField({ field, children, className = '', as: Tag = 'div'
             ? '1.5px dashed #93c5fd'
             : '1px dashed rgba(147,197,253,0.4)',
         outlineOffset: '2px',
-        borderRadius: '4px',
+        borderRadius: `${borderRadius}px`,
         transition: 'all 0.12s ease',
       }}
     >

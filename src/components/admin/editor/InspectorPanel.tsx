@@ -33,13 +33,6 @@ export function InspectorPanel() {
   const value = values[selectedField.key]
   const handleChange = (newValue: any) => updateValue(selectedField.key, newValue)
 
-  const panelHeight = (() => {
-    if (!selectedField) return 'h-full'
-    if (['resume', 'contenu'].includes(selectedField.key)) return 'min-h-[520px]'
-    if (selectedField.key === 'description') return 'min-h-[300px]'
-    return 'min-h-[200px]'
-  })()
-
   let fieldTypeLabel = 'Texte'
   if (selectedField.type === 'richtext') {
     fieldTypeLabel = 'Contenu riche'
@@ -72,14 +65,11 @@ export function InspectorPanel() {
         </button>
       </div>
 
-      {/* ✅ Wrapper scrollable + resize */}
+      {/* Wrapper scrollable + resize */}
       <div
         className={[
-          'flex-1 overflow-y-auto p-4',
-          panelHeight,
-          'resize-y overflow-auto',
+          'flex-1 overflow-y-auto p-4 min-h-0',
         ].join(' ')}
-        style={{ minHeight: 160, maxHeight: '80vh' }}
       >
         {selectedField.type === 'text' && (
           <TextField field={selectedField} value={value ?? ''} onChange={handleChange} />
@@ -120,43 +110,45 @@ export function InspectorPanel() {
             💡 {selectedField.hint}
           </p>
         )}
+
+        {selectedField.type === 'liens' && (
+          <div className="p-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 mb-3">
+              {selectedField.hint ?? ''}
+            </p>
+            {(() => {
+              let bloc: 'pourEnSavoirPlus' | 'outils' | 'patients' = 'pourEnSavoirPlus'
+              if (selectedField.key === 'outilsIds') {
+                bloc = 'outils'
+              } else if (selectedField.key === 'patientsIds') {
+                bloc = 'patients'
+              }
+              return (
+                <LiensPicker
+                  titre={selectedField.label}
+                  selectedIds={value ?? []}
+                  onChange={handleChange}
+                  ficheId={ficheId}
+                  bloc={bloc}
+                />
+              )
+            })()}
+          </div>
+        )}
+
+        {selectedField.type === 'image' && (
+          <div className="p-4 border-t border-gray-100">
+            <IllustrationField
+              ficheId={ficheId}
+              value={value ?? ''}
+              onChange={(url, assetId) => {
+                handleChange(url)
+                updateValue('illustrationId', assetId)
+              }}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Champs spéciaux EN DEHORS du wrapper */}
-      {selectedField.type === 'liens' && (
-        <div className="p-4 border-t border-gray-100">
-          <p className="text-xs text-gray-400 mb-3">
-            {selectedField.hint ?? ''}
-          </p>
-          {(() => {
-            let bloc: 'pourEnSavoirPlus' | 'outils' | 'patients' = 'pourEnSavoirPlus'
-            if (selectedField.key === 'outilsIds') {
-              bloc = 'outils'
-            } else if (selectedField.key === 'patientsIds') {
-              bloc = 'patients'
-            }
-            return (
-              <LiensPicker
-                titre={selectedField.label}
-                selectedIds={value ?? []}
-                onChange={handleChange}
-                ficheId={ficheId}
-                bloc={bloc}
-              />
-            )
-          })()}
-        </div>
-      )}
-
-      {selectedField.type === 'image' && (
-        <div className="p-4 border-t border-gray-100">
-          <IllustrationField
-            ficheId={ficheId}
-            value={value ?? ''}
-            onChange={handleChange}
-          />
-        </div>
-      )}
     </div>
   )
 }

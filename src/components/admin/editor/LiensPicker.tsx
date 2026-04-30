@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEditor } from './EditorContext'
-import { listLiens, createLienAndLinkToFiche } from '@/services/contentful-management'
+import { useRef, useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { createLienAndLinkToFiche, listLiens } from '@/services/contentful-management'
+import { useEditor } from './EditorContext'
 
 type LienItem = {
   id: string
@@ -22,9 +22,6 @@ type Props = {
 }
 
 export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Props) {
-  const [allLiens, setAllLiens] = useState<LienItem[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [mode, setMode] = useState<'idle' | 'picker' | 'create'>('idle')
   const [newTitre, setNewTitre] = useState('')
@@ -33,22 +30,9 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
 
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  // Charge les liens au premier besoin
-  const ensureLoaded = useCallback(async () => {
-    if (loaded) return
-    setLoading(true)
-    try {
-      setAllLiens(await listLiens())
-      setLoaded(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  // Charge dès le montage pour pouvoir afficher les sélectionnés
-  useEffect(() => {
-    ensureLoaded()
-  }, [ensureLoaded])
+  const { allLiens: contextLiens, setAllLiens, liensLoaded } = useEditor()
+  const allLiens = contextLiens as LienItem[]
+  const loading = !liensLoaded
 
   useEffect(() => {
     if (mode === 'picker' && searchInputRef.current) {
@@ -138,7 +122,7 @@ export function LiensPicker({ titre, selectedIds, onChange, ficheId, bloc }: Pro
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => { setMode('picker'); ensureLoaded() }}
+            onClick={() => { setMode('picker') }}
             className="flex-1 text-xs py-2 border border-gray-200 rounded-lg
               text-gray-600 hover:bg-gray-50 transition-colors"
           >
