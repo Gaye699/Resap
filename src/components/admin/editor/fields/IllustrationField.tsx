@@ -3,36 +3,34 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 
-import { setFicheIllustration } from '@/services/contentful-management'
 import { AssetPicker } from '../AssetPicker'
+import { setFicheIllustration } from '@/services/contentful-management'
 
 type Props = {
   ficheId: string
   value: string
-  onChange: (url: string) => void
+  onChange: (url: string, assetId: string) => void
 }
 
 export function IllustrationField({ ficheId, value, onChange }: Props) {
   const [showPicker, setShowPicker] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const handleSelect = async (asset: {
-    id: string; titre: string; url: string; contentType: string; fileName: string
-  }) => {
-    setSaving(true)
-    try {
-      // Sauvegarde immédiate dans Contentful (la fiche existe déjà)
-      await setFicheIllustration(ficheId, asset.id)
-      // Met à jour la preview en temps réel
-      onChange(asset.url)
-      toast.success('Illustration mise à jour.')
-    } catch {
-      toast.error('Erreur lors de la mise à jour de l\'illustration.')
-    } finally {
-      setSaving(false)
-      setShowPicker(false)
+    const handleSelect = async (asset: {
+      id: string; titre: string; url: string; contentType: string; fileName: string
+    }) => {
+      setSaving(true)
+      try {
+        await setFicheIllustration(ficheId, asset.id)
+        onChange(asset.url, asset.id)
+        toast.success('Illustration mise à jour.')
+      } catch {
+        toast.error('Erreur lors de la mise à jour de l\'illustration.')
+      } finally {
+        setSaving(false)
+        setShowPicker(false)
+      }
     }
-  }
 
   return (
     <div>

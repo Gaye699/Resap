@@ -396,13 +396,15 @@ export const listFiches = async () => {
   return Promise.all(entries.items.map(async (entry: any) => {
     let illustrationUrl: string | undefined
 
-    const illustrationId = entry.fields.illustration?.fr?.sys?.id
+        const illustrationLink = getEntryLinkField(entry.fields.illustration)
+        const illustrationId = illustrationLink?.sys?.id
 
     if (illustrationId) {
       try {
         const asset = await environment.getAsset(illustrationId)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawUrl = asset.fields.file?.fr?.url as string | undefined
+        const fileField = getAssetFileField(asset)
+        const rawUrl = fileField?.url as string | undefined
         if (rawUrl) {
           illustrationUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
         }
@@ -431,6 +433,15 @@ type ResolvedAsset = {
   url: string
   contentType: string
 }
+
+const getLocalizedFieldValue = <T>(field?: Record<string, T>): T | undefined => {
+  if (!field || typeof field !== 'object') return undefined
+  return field.fr ?? field['en-US'] ?? Object.values(field)[0]
+}
+
+const getAssetFileField = (asset: any) => getLocalizedFieldValue<any>(asset.fields.file)
+const getAssetTitleField = (asset: any) => getLocalizedFieldValue<string>(asset.fields.title)
+const getEntryLinkField = (field: any) => getLocalizedFieldValue<any>(field)
 
 const collectEmbeddedAssetIds = (node: any, ids = new Set<string>()) => {
   if (!node || typeof node !== 'object') return ids
@@ -497,17 +508,17 @@ export const getFicheById = async (id: string) => {
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
 
-  const resumeDoc = (entry.fields.resume as { fr: Document } | undefined)?.fr ?? {
-    nodeType: 'document',
+  const resumeDoc = (entry.fields.resume as { fr: Document } | undefined)?.fr ?? ({
+    nodeType: BLOCKS.DOCUMENT,
     data: {},
     content: [],
-  }
+  } as Document)
 
-  const contenuDoc = (entry.fields.contenu as { fr: Document } | undefined)?.fr ?? {
-    nodeType: 'document',
+  const contenuDoc = (entry.fields.contenu as { fr: Document } | undefined)?.fr ?? ({
+    nodeType: BLOCKS.DOCUMENT,
     data: {},
     content: [],
-  }
+  } as Document)
 
   const embeddedAssetIds = [
     ...collectEmbeddedAssetIds(resumeDoc),
@@ -552,21 +563,19 @@ export const getFicheById = async (id: string) => {
   let illustrationUrl: string | undefined
   let illustrationId: string | undefined
 
-  const illustrationField = entry.fields.illustration as
-    | { fr: { sys: { id: string } } }
-    | undefined
+  const illustrationField = getEntryLinkField(entry.fields.illustration)
 
-  if (illustrationField?.fr?.sys?.id) {
-    illustrationId = illustrationField.fr.sys.id
+  if (illustrationField?.sys?.id) {
+    const currentIllustrationId = illustrationField.sys.id
+    illustrationId = currentIllustrationId
     try {
-      const asset = await environment.getAsset(illustrationId)
-      const rawUrl = (asset.fields.file as any)?.fr?.url as string | undefined
+      const asset = await environment.getAsset(currentIllustrationId)
+      const fileField = getAssetFileField(asset)
+      const rawUrl = fileField?.url as string | undefined
       if (rawUrl) {
-        // Gère les URLs commençant par // ou déjà complètes
         illustrationUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
       }
     } catch {
-      // L'asset n'existe peut-être pas dans l'env dev
       illustrationUrl = undefined
     }
   }
@@ -600,7 +609,8 @@ export type UpdateFicheData = {
   resume?: string
   contenu?: string
   typeDispositif?: string[]
-  // illustration gérée séparément (upload d'asset)
+  illustrationId?: string
+
 }
 
 // Crée une nouvelle fiche dans Contentful
@@ -841,11 +851,26 @@ export const updateFicheInContentful = async (
   }
 
   await entry.update()
+
+  if (entry.sys.publishedAt) {
+    await entry.publish()
+  }
 }
 
 export const publishFiche = async (id: string): Promise<void> => {
   const environment = await getEnvironment()
   const entry = await environment.getEntry(id)
+
+  const illustrationField = getEntryLinkField(entry.fields.illustration)
+  const illustrationId = illustrationField?.sys?.id
+
+  if (illustrationId) {
+    const asset = await environment.getAsset(illustrationId)
+    if (!asset.sys.publishedVersion) {
+      await asset.publish()
+    }
+  }
+
   await entry.publish()
 }
 
@@ -896,18 +921,6 @@ export const getStructuresByTypes = async (types: string[]) => {
 
 // ─── ASSETS (illustrations, PDFs) ─────────────────────────────────────────
 
-// Fonction interne : upload les bytes du fichier
-async function uploadFileToContentful(environment: any, file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-
-  const upload = await environment.createUpload({
-    file: Buffer.from(buffer),
-    contentType: file.type,
-  })
-
-  return upload.sys.id
-}
-
 // Upload un fichier local comme Asset Contentful
 // Retourne l'id de l'asset créé
 export const uploadAssetToContentful = async (
@@ -915,33 +928,48 @@ export const uploadAssetToContentful = async (
   titre: string,
 ): Promise<{ id: string; url: string }> => {
   const environment = await getEnvironment()
+  const buffer = await file.arrayBuffer()
 
-  // 1. Crée l'asset avec les métadonnées
-  const asset = await environment.createAsset({
+  const asset = await environment.createAssetFromFiles({
     fields: {
-      title: { fr: titre },
+      title: {
+        fr: titre,
+      },
+      description: {
+        fr: '',
+      },
       file: {
         fr: {
-          contentType: file.type,
+          contentType: file.type || 'application/octet-stream',
           fileName: file.name,
-          // Contentful attend un upload via une URL signée
-          // On utilise l'API de upload d'abord
-          upload: await uploadFileToContentful(environment, file),
+          file: buffer,
         },
       },
     },
   })
 
-  // 2. Traite l'asset (génère les variantes d'images)
-  const processed = await asset.processForAllLocales()
+  await asset.processForAllLocales({
+    processingCheckWait: 1000,
+    processingCheckRetries: 15,
+  })
 
-  // 3. Publie l'asset pour qu'il soit accessible
-  const published = await processed.publish()
+  const processedAsset = await environment.getAsset(asset.sys.id)
+  const fileField = processedAsset.fields.file?.fr
+    ?? processedAsset.fields.file?.['en-US']
+    ?? Object.values(processedAsset.fields.file ?? {})[0] as any
 
-  const url = published.fields.file?.fr?.url
-  const finalUrl = url ? `https:${url}` : ''
+  const rawUrl = fileField?.url ?? ''
 
-  return { id: published.sys.id, url: finalUrl }
+  if (!rawUrl) {
+    throw new Error("L'asset a ete cree, mais Contentful n'a pas genere d'URL de fichier.")
+  }
+
+  const finalUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
+
+  return {
+    id: processedAsset.sys.id,
+    url: finalUrl,
+  }
 }
 
 // Liste tous les assets existants (pour le picker d'assets dans l'éditeur)
@@ -953,13 +981,21 @@ export const listAssets = async (search?: string) => {
 
   const assets = await environment.getAssets(query)
 
-  return assets.items.map((asset: any) => ({
-    id: asset.sys.id,
-    titre: asset.fields.title?.fr ?? '',
-    url: asset.fields.file?.fr?.url ? `https:${asset.fields.file.fr.url}` : '',
-    contentType: asset.fields.file?.fr?.contentType ?? '',
-    fileName: asset.fields.file?.fr?.fileName ?? '',
-  }))
+    return assets.items.map((asset: any) => {
+      const fileField = getAssetFileField(asset)
+      const rawUrl = fileField?.url ?? ''
+      const finalUrl = rawUrl
+        ? (String(rawUrl).startsWith('//') ? `https:${rawUrl}` : String(rawUrl))
+        : ''
+
+      return {
+        id: asset.sys.id,
+        titre: getAssetTitleField(asset) ?? '',
+        url: finalUrl,
+        contentType: fileField?.contentType ?? '',
+        fileName: fileField?.fileName ?? '',
+      }
+    })
 }
 
 // Met à jour l'illustration d'une fiche (lien vers un asset existant)

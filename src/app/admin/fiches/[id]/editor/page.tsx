@@ -13,6 +13,7 @@ import {
   publishFiche,
   unpublishFiche,
   listLiens,
+  setFicheIllustration,
 } from '@/services/contentful-management'
 import { FicheEditorView } from './FicheEditorView'
 
@@ -24,11 +25,11 @@ export default function FicheEditorPage() {
   const [initialValues, setInitialValues] = useState<Record<string, any>>({})
   const [isPublished, setIsPublished] = useState(false)
   const [titre, setTitre] = useState('Nouvelle fiche')
-
-  const [allLiens, setAllLiens] = useState<Awaited<ReturnType<typeof listLiens>>>([])
+  const [allLiens, setAllLiens] = useState<Array<{ id: string; titre: string; url?: string; hasFichier: boolean; statut: string }>>([])
+  const [liensLoaded, setLiensLoaded] = useState(false)
 
   useEffect(() => {
-    getFicheById(id).then((fiche) => {
+    Promise.all([getFicheById(id), listLiens()]).then(([fiche, liens]) => {
       // TOUS les champs passés à l'éditeur
       setInitialValues({
         titre: fiche.titre,
@@ -47,8 +48,9 @@ export default function FicheEditorPage() {
       })
       setIsPublished(fiche.statut === 'published')
       setTitre(fiche.titre)
+      setAllLiens(liens)
+      setLiensLoaded(true)
       setLoading(false)
-      listLiens().then(setAllLiens)
     }).catch(() => {
       toast.error('Impossible de charger la fiche.')
     })
@@ -72,6 +74,10 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
       ? values.pourEnSavoirPlusIds
       : [],
   })
+
+  if (values.illustrationId) {
+    await setFicheIllustration(id, values.illustrationId)
+  }
 
   toast.success('Fiche sauvegardée.')
   setTitre(values.titre ?? titre)
@@ -111,6 +117,8 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
       isPublished={isPublished}
       onSave={handleSave}
       onPublish={handlePublish}
+      allLiens={allLiens}
+      liensLoaded={liensLoaded}
     >
       <div className="flex h-dvh flex-col overflow-hidden">
 
@@ -123,12 +131,14 @@ const handleSave = useCallback(async (values: Record<string, any>) => {
             <FicheEditorView ficheId={id} />
           </div>
 
-          <div className="hidden lg:block w-1 cursor-col-resize bg-gray-100 hover:bg-blue-200" />
-          <div className="block lg:hidden h-2 cursor-row-resize bg-gray-100 hover:bg-blue-200" />
-
           {/* Panneau latéral d'édition */}
-          <div className="resize-y overflow-auto border-t border-gray-200 bg-white min-h-[220px] max-h-[75vh] h-[42vh] lg:resize-x lg:h-auto lg:w-[360px] lg:min-w-[320px] lg:max-w-[640px] lg:border-l lg:border-t-0">
-            <InspectorPanel />
+          <div
+            className="relative border-l border-gray-200 bg-white flex flex-col overflow-hidden resize-x"
+            style={{ width: 360, minWidth: 280, maxWidth: 560, resize: 'horizontal' }}
+          >
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <InspectorPanel />
+            </div>
           </div>
 
         </div>
