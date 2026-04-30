@@ -53,8 +53,12 @@ export function RichTextEditor({
       TextStyle,
       Color,
       AssetImage.configure({
-        inline: true,
+        inline: false,
         allowBase64: true,
+        HTMLAttributes: {
+          class: 'embedded-editor-image',
+          draggable: 'true',
+        },
       }),
       LinkExtension.configure({ openOnClick: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -87,13 +91,12 @@ export function RichTextEditor({
   if (!editor) return
 
   if (asset.contentType.startsWith('image/')) {
-    // Image
-   editor.chain().focus().setImage({
-    src: asset.url,
-    alt: asset.titre || asset.fileName,
-    // @ts-expect-error — data-* non typé par Tiptap mais accepté par le DOM
-    'data-asset-id': asset.id,
-  }).run()
+    editor.chain().focus().setImage({
+      src: asset.url,
+      alt: asset.titre || asset.fileName,
+      // @ts-expect-error data-* accepte par le DOM
+      'data-asset-id': asset.id,
+    }).createParagraphNear().run()
   } else {
     editor.chain().focus().insertContent({
       type: 'text',
@@ -120,6 +123,28 @@ export function RichTextEditor({
       editor.commands.setContent(value || '<p></p>', { emitUpdate: false })
     }
   }, [value, editor])
+
+    const editorAssetStyles = `
+    .embedded-editor-image {
+      display: block;
+      max-width: 320px;
+      width: auto;
+      height: auto;
+      margin: 12px 0;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      cursor: grab;
+    }
+
+    .embedded-editor-image:active {
+      cursor: grabbing;
+    }
+
+    .ProseMirror img.embedded-editor-image {
+      display: block;
+    }
+  `
 
   // UI
   return (

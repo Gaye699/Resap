@@ -22,24 +22,15 @@ function Btn({ onClick, isActive, title, children, disabled }: BtnProps) {
       onMouseDown={(e) => { e.preventDefault(); onClick() }}
       disabled={disabled}
       title={title}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 28,
-        height: 28,
-        borderRadius: 4,
-        border: 'none',
-        background: isActive ? '#dbeafe' : 'transparent',
-        color: isActive ? '#1d4ed8' : '#374151',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        fontSize: 13,
-        fontWeight: isActive ? 600 : 400,
-        opacity: disabled ? 0.35 : 1,
-        transition: 'background 0.1s',
-      }}
-      onMouseEnter={(e) => { if (!isActive && !disabled) e.currentTarget.style.background = '#f3f4f6' }}
-      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+      className={`
+        inline-flex items-center justify-center w-7 h-7 rounded text-[13px]
+        transition-all border
+        ${isActive
+          ? 'bg-blue-100 text-blue-700 border-blue-200 font-semibold'
+          : 'bg-transparent text-gray-600 border-transparent hover:bg-gray-100 hover:border-gray-200'
+        }
+        ${disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
+      `}
     >
       {children}
     </button>
@@ -47,7 +38,7 @@ function Btn({ onClick, isActive, title, children, disabled }: BtnProps) {
 }
 
 function Sep() {
-  return <div style={{ width: 1, height: 18, background: '#e5e7eb', margin: '0 3px', flexShrink: 0 }} />
+  return <div className="w-px h-4 bg-gray-200 mx-1 shrink-0" />
 }
 
 export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
@@ -66,18 +57,7 @@ export function RichTextToolbar({ editor, onEmbedAsset }: Props) {
   const currentColor = editor.getAttributes('textStyle').color ?? '#000000'
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1,
-        padding: '5px 8px',
-        background: '#fafafa',
-        borderBottom: '1px solid #e5e7eb',
-        flexWrap: 'wrap',
-        rowGap: 4,
-      }}
-    >
+    <div className="flex items-center gap-0.5 px-2 py-1.5 bg-white border-b border-gray-200 flex-wrap">
       {/* Titres */}
       <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} title="Titre 1">H1</Btn>
       <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive('heading', { level: 2 })} title="Titre 2">H2</Btn>
