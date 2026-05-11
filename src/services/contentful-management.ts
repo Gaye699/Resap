@@ -244,6 +244,7 @@ export const unpublishStructure = async (id: string): Promise<void> => {
 export type CreateLienData = {
   titre: string
   url?: string
+  fichierAssetId?: string
 }
 
 export const listLiens = async () => {
@@ -287,6 +288,15 @@ export const createLienInContentful = async (data: CreateLienData) => {
     fields: {
       titre: { fr: data.titre },
       ...(data.url ? { url: { fr: data.url } } : {}),
+      ...(data.fichierAssetId
+        ? {
+            fichier: {
+              fr: {
+                sys: { type: 'Link', linkType: 'Asset', id: data.fichierAssetId },
+              },
+            },
+          }
+        : {}),
     },
   })
 
@@ -321,7 +331,14 @@ export const updateFicheLiens = async (
   entry.fields.patients = { fr: toLinks(patients) }
   entry.fields.pourEnSavoirPlus = { fr: toLinks(pourEnSavoirPlus) }
 
+  const wasPublished = !!entry.sys.publishedAt
+
   await entry.update()
+
+  if (wasPublished) {
+    const freshEntry = await environment.getEntry(ficheId)
+    await freshEntry.publish()
+  }
 }
 
 export const publishLien = async (id: string): Promise<void> => {
@@ -347,11 +364,31 @@ export const createLienAndLinkToFiche = async (
 ): Promise<{ id: string }> => {
   const environment = await getEnvironment()
 
+  if (!lienData.url && !lienData.fichierAssetId) {
+    throw new Error('Un lien doit contenir une URL ou un fichier.')
+  }
+
+  if (lienData.fichierAssetId) {
+    const asset = await environment.getAsset(lienData.fichierAssetId)
+    if (!asset.sys.publishedVersion) {
+      await asset.publish()
+    }
+  }
+
   // 1. Créer le lien
   const lienEntry = await environment.createEntry('lien', {
     fields: {
       titre: { fr: lienData.titre },
       ...(lienData.url ? { url: { fr: lienData.url } } : {}),
+      ...(lienData.fichierAssetId
+        ? {
+            fichier: {
+              fr: {
+                sys: { type: 'Link', linkType: 'Asset', id: lienData.fichierAssetId },
+              },
+            },
+          }
+        : {}),
     },
   })
 
@@ -378,7 +415,13 @@ export const createLienAndLinkToFiche = async (
   }
 
   // 5. Sauvegarder la fiche
+  const wasPublished = !!ficheEntry.sys.publishedAt
   await ficheEntry.update()
+
+  if (wasPublished) {
+    const fresh = await environment.getEntry(ficheId)
+    await fresh.publish()
+  }
 
   return { id: lienEntry.sys.id }
 }
@@ -712,7 +755,13 @@ const htmlToContentfulRichText = (html: string): Document => {
       if (node.type !== 'element') return []
 
       if (node.tagName === 'img') {
-        const assetId = node.properties?.['data-asset-id']
+        // rehype can expose data attributes as either kebab-case or camelCase.
+        const rawAssetId =
+          node.properties?.['data-asset-id']
+          ?? node.properties?.dataAssetId
+          ?? node.dataset?.assetId
+        const assetId = Array.isArray(rawAssetId) ? rawAssetId[0] : rawAssetId
+
         if (!assetId) return []
 
         return [{
@@ -853,7 +902,8 @@ export const updateFicheInContentful = async (
   await entry.update()
 
   if (entry.sys.publishedAt) {
-    await entry.publish()
+    const freshEntry = await environment.getEntry(id)
+    await freshEntry.publish()
   }
 }
 
@@ -870,6 +920,22 @@ export const publishFiche = async (id: string): Promise<void> => {
       await asset.publish()
     }
   }
+
+  const resumeDoc = getLocalizedFieldValue<Document>(entry.fields.resume)
+  const contenuDoc = getLocalizedFieldValue<Document>(entry.fields.contenu)
+  const embeddedAssetIds = [
+    ...collectEmbeddedAssetIds(resumeDoc),
+    ...collectEmbeddedAssetIds(contenuDoc),
+  ]
+
+  await Promise.all(
+    [...new Set(embeddedAssetIds)].map(async (assetId) => {
+      const asset = await environment.getAsset(assetId)
+      if (!asset.sys.publishedVersion) {
+        await asset.publish()
+      }
+    }),
+  )
 
   await entry.publish()
 }
@@ -932,12 +998,8 @@ export const uploadAssetToContentful = async (
 
   const asset = await environment.createAssetFromFiles({
     fields: {
-      title: {
-        fr: titre,
-      },
-      description: {
-        fr: '',
-      },
+      title: { fr: titre },
+      description: { fr: '' },
       file: {
         fr: {
           contentType: file.type || 'application/octet-stream',
@@ -953,70 +1015,80 @@ export const uploadAssetToContentful = async (
     processingCheckRetries: 15,
   })
 
-  const processedAsset = await environment.getAsset(asset.sys.id)
-  const fileField = processedAsset.fields.file?.fr
-    ?? processedAsset.fields.file?.['en-US']
-    ?? Object.values(processedAsset.fields.file ?? {})[0] as any
+  const processed = await environment.getAsset(asset.sys.id)
+  const published = await processed.publish()
+
+  const fileField = published.fields.file?.fr
+    ?? published.fields.file?.['en-US']
+    ?? Object.values(published.fields.file ?? {})[0] as any
 
   const rawUrl = fileField?.url ?? ''
-
-  if (!rawUrl) {
-    throw new Error("L'asset a ete cree, mais Contentful n'a pas genere d'URL de fichier.")
-  }
-
-  const finalUrl = rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl
+  if (!rawUrl) throw new Error("L'asset a été créé mais Contentful n'a pas généré d'URL.")
 
   return {
-    id: processedAsset.sys.id,
-    url: finalUrl,
+    id: published.sys.id,
+    url: rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl,
   }
 }
 
 // Liste tous les assets existants (pour le picker d'assets dans l'éditeur)
-export const listAssets = async (search?: string) => {
+export const listAssets = async (search?: string, skip = 0, limit = 24) => {
   const environment = await getEnvironment()
 
-  const query: Record<string, any> = { limit: 100 }
+  const query: Record<string, any> = { limit, skip, order: '-sys.createdAt' }
   if (search) query['fields.title[match]'] = search
 
-  const assets = await environment.getAssets(query)
+  const result = await environment.getAssets(query)
 
-    return assets.items.map((asset: any) => {
-      const fileField = getAssetFileField(asset)
-      const rawUrl = fileField?.url ?? ''
-      const finalUrl = rawUrl
-        ? (String(rawUrl).startsWith('//') ? `https:${rawUrl}` : String(rawUrl))
-        : ''
+  const items = result.items.map((asset: any) => {
+    const fileField = getAssetFileField(asset)
+    const rawUrl = fileField?.url ?? ''
+    const finalUrl = rawUrl
+      ? (String(rawUrl).startsWith('//') ? `https:${rawUrl}` : String(rawUrl))
+      : ''
+    return {
+      id: asset.sys.id,
+      titre: getAssetTitleField(asset) ?? '',
+      url: finalUrl,
+      contentType: fileField?.contentType ?? '',
+      fileName: fileField?.fileName ?? '',
+    }
+  })
 
-      return {
-        id: asset.sys.id,
-        titre: getAssetTitleField(asset) ?? '',
-        url: finalUrl,
-        contentType: fileField?.contentType ?? '',
-        fileName: fileField?.fileName ?? '',
-      }
-    })
+  return {
+    items,
+    total: result.total,
+    skip,
+    limit,
+  }
 }
 
-// Met à jour l'illustration d'une fiche (lien vers un asset existant)
+// Met à jour l'illustration d'une fiche
 export const setFicheIllustration = async (
   ficheId: string,
   assetId: string,
 ): Promise<void> => {
   const environment = await getEnvironment()
+
+  const asset = await environment.getAsset(assetId)
+  if (!asset.sys.publishedVersion) {
+    await asset.publish()
+  }
+
   const entry = await environment.getEntry(ficheId)
 
   entry.fields.illustration = {
     fr: {
-      sys: {
-        type: 'Link',
-        linkType: 'Asset',
-        id: assetId,
-      },
+      sys: { type: 'Link', linkType: 'Asset', id: assetId },
     },
   }
 
-  await entry.update()
+  const updated = await entry.update()
+
+  // Publier l'entry si elle était déjà publiée
+  if (updated.sys.publishedVersion) {
+    await updated.publish()
+  }
 }
 
 // Crée une fiche avec des valeurs minimales obligatoires
@@ -1068,4 +1140,32 @@ export const unpublishFiche = async (id: string): Promise<void> => {
   if (entry.sys.publishedAt) {
     await entry.unpublish()
   }
+}
+
+export const updateLienInContentful = async (
+  id: string,
+  data: { titre?: string; url?: string; fichierAssetId?: string; clearFichier?: boolean },
+): Promise<void> => {
+  const environment = await getEnvironment()
+  const entry = await environment.getEntry(id)
+  if (data.titre !== undefined) entry.fields.titre = { fr: data.titre }
+  if (data.url !== undefined) entry.fields.url = data.url ? { fr: data.url } : undefined
+
+  if (data.fichierAssetId) {
+    const asset = await environment.getAsset(data.fichierAssetId)
+    if (!asset.sys.publishedVersion) {
+      await asset.publish()
+    }
+    entry.fields.fichier = {
+      fr: {
+        sys: { type: 'Link', linkType: 'Asset', id: data.fichierAssetId },
+      },
+    }
+  }
+
+  if (data.clearFichier) {
+    entry.fields.fichier = undefined
+  }
+
+  await entry.update()
 }
