@@ -36,6 +36,7 @@ export default function AdminFichesPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [view, setView] = useState<View>('table')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const selectClassName = 'border border-gray-200 rounded-lg px-3 py-2 pr-9 text-sm bg-white appearance-none'
 
   const charger = async () => {
     setLoading(true)
@@ -163,7 +164,7 @@ export default function AdminFichesPage() {
         <select
           value={filters.statut ?? ''}
           onChange={(e) => setFilter('statut', e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className={selectClassName}
         >
           <option value="">Statut (tous)</option>
           <option value="published">Publié</option>
@@ -173,7 +174,7 @@ export default function AdminFichesPage() {
         <select
           value={filters.categorie ?? ''}
           onChange={(e) => setFilter('categorie', e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className={selectClassName}
         >
           <option value="">Catégorie (toutes)</option>
           {Object.entries(CATEGORIE_COLORS).map(([val, { label }]) => (
@@ -184,7 +185,7 @@ export default function AdminFichesPage() {
         <select
           value={String(sortKey ?? 'updatedAt')}
           onChange={(e) => setSort(e.target.value as keyof Fiche, sortDir)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className={selectClassName}
         >
           <option value="updatedAt">Tri: Date de modification</option>
           <option value="statut">Tri: Statut</option>
@@ -195,7 +196,7 @@ export default function AdminFichesPage() {
         <select
           value={sortDir}
           onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Fiche, e.target.value as 'asc' | 'desc')}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+          className={selectClassName}
         >
           <option value="desc">Ordre: décroissant</option>
           <option value="asc">Ordre: croissant</option>
@@ -374,12 +375,22 @@ export default function AdminFichesPage() {
               {paginated.map((f) => {
                 const cat = CATEGORIE_COLORS[f.categorie]
                 return (
-                  <tr key={f.id} className={selectedIds.has(f.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}>
-                    <td className="pl-4 pr-2 py-3">
+                  <tr
+                    key={f.id}
+                    onClick={() => router.push(`/admin/fiches/${f.id}/editor`)}
+                    className={`cursor-pointer transition-colors ${selectedIds.has(f.id) ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
+                  >
+                    <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={selectedIds.has(f.id)} onChange={() => toggleSelect(f.id)} className="w-4 h-4 rounded border-gray-300" aria-label="Sélectionner" />
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 text-sm">{f.titre}</p>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/admin/fiches/${f.id}/editor`)}
+                        className="font-medium text-gray-900 text-sm hover:text-blue-600 text-left transition-colors"
+                      >
+                        {f.titre}
+                      </button>
                       <p className="text-xs text-gray-400">/{f.slug}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -391,12 +402,12 @@ export default function AdminFichesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">{new Date(f.updatedAt).toLocaleDateString('fr-FR')}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <ActionMenu
                         actions={[
                         { label: 'Éditeur visuel', icon: <PencilIcon className="w-4 h-4" />, onClick: () => router.push(`/admin/fiches/${f.id}/editor`) },
                         { label: f.statut === 'published' ? 'Dépublier' : 'Publier', icon: <CheckIcon className="w-4 h-4" />, onClick: () => handleTogglePublish(f) },
-                        { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => handleDeleteOne(f.id) },
+                        { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => setDeleteTarget(f.id) },
                       ]}
                       />
                     </td>
@@ -461,3 +472,5 @@ export default function AdminFichesPage() {
     </div>
   )
 }
+
+
