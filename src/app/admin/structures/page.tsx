@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -11,16 +11,16 @@ import {
 } from '@/services/contentful-management'
 import { ActionMenu } from '@/components/admin/ActionMenu'
 import { BulkBar } from '@/components/admin/BulkBar'
+import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal'
 import { useTableFilters } from '@/hooks/useTableFilters'
 import { types } from '@/data/structures_types'
 import { CheckIcon, CircleIcon, TrashIcon, PlusIcon, SearchIcon } from '@/components/Icons/AdminIcons'
 
 type Structure = Awaited<ReturnType<typeof listStructures>>[number]
 
-// Icône de tri dans l'entête de colonne
 function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-  if (!active) return <span style={{ color: '#d1d5db', fontSize: 10 }}>↕</span>
-  return <span style={{ color: '#3b82f6', fontSize: 10 }}>{dir === 'asc' ? '↑' : '↓'}</span>
+  if (!active) return <span style={{ color: '#d1d5db', fontSize: 10 }}>^</span>
+  return <span style={{ color: '#3b82f6', fontSize: 10 }}>{dir === 'asc' ? '^' : 'v'}</span>
 }
 
 export default function AdminStructuresPage() {
@@ -28,6 +28,8 @@ export default function AdminStructuresPage() {
   const [data, setData] = useState<Structure[]>([])
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const selectClassName = 'border border-gray-200 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none bg-white appearance-none'
 
   const charger = async () => {
     setLoading(true)
@@ -60,13 +62,12 @@ export default function AdminStructuresPage() {
     defaultSortDir: 'desc',
   })
 
-  // Suppression d'une seule structure
   const handleDeleteOne = async (id: string) => {
     setIsProcessing(true)
     try {
       await deleteStructure(id)
-      toast.success('Structure supprimée.')
-      charger()
+      toast.success('Structure supprimee.')
+      await charger()
     } catch {
       toast.error('Erreur lors de la suppression.')
     } finally {
@@ -74,26 +75,24 @@ export default function AdminStructuresPage() {
     }
   }
 
-  // Publication d'une structure
   const handlePublishOne = async (id: string) => {
     try {
       await publishStructure(id)
-      toast.success('Structure publiée.')
-      charger()
+      toast.success('Structure publiee.')
+      await charger()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur de publication.')
     }
   }
 
-  // Suppression en masse
   const handleBulkDelete = async () => {
-    if (!window.confirm(`Supprimer définitivement ${selectedIds.size} structure(s) ?`)) return
+    if (!window.confirm(`Supprimer definitivement ${selectedIds.size} structure(s) ?`)) return
     setIsProcessing(true)
     try {
       await Promise.all([...selectedIds].map(deleteStructure))
-      toast.success(`${selectedIds.size} structure(s) supprimée(s).`)
+      toast.success(`${selectedIds.size} structure(s) supprimee(s).`)
       clearSelection()
-      charger()
+      await charger()
     } catch {
       toast.error('Erreur lors de la suppression en masse.')
     } finally {
@@ -101,14 +100,13 @@ export default function AdminStructuresPage() {
     }
   }
 
-  // Publication en masse
   const handleBulkPublish = async () => {
     setIsProcessing(true)
     try {
       await Promise.all([...selectedIds].map(publishStructure))
-      toast.success(`${selectedIds.size} structure(s) publiée(s).`)
+      toast.success(`${selectedIds.size} structure(s) publiee(s).`)
       clearSelection()
-      charger()
+      await charger()
     } catch {
       toast.error('Erreur lors de la publication en masse.')
     } finally {
@@ -123,8 +121,6 @@ export default function AdminStructuresPage() {
 
   return (
     <div className="p-6">
-
-      {/* ── EN-TÊTE ── */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Structures</h1>
@@ -134,211 +130,77 @@ export default function AdminStructuresPage() {
               : `${data.length} structure${data.length > 1 ? 's' : ''}`}
           </p>
         </div>
-        <Link
-          href="/admin/structures/nouveau"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <Link href="/admin/structures/nouveau" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
           <PlusIcon className="w-4 h-4" />
           Nouvelle structure
         </Link>
       </div>
 
-      {/* ── FILTRES ── */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-center">
-
-        {/* Recherche */}
         <div className="relative flex-1 min-w-56">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher par nom, adresse, organisation..."
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-          />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher par nom, adresse, organisation..." className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
         </div>
 
-        {/* Filtre statut */}
-        <select
-          value={filters.statut ?? ''}
-          onChange={(e) => setFilter('statut', e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
-        >
+        <select value={filters.statut ?? ''} onChange={(e) => setFilter('statut', e.target.value)} className={selectClassName}>
           <option value="">Statut (tous)</option>
-          <option value="published">Publié</option>
+          <option value="published">Publie</option>
           <option value="draft">Brouillon</option>
         </select>
 
-        {/* Filtre type */}
-        <select
-          value={filters.type ?? ''}
-          onChange={(e) => setFilter('type', e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
-        >
+        <select value={filters.type ?? ''} onChange={(e) => setFilter('type', e.target.value)} className={selectClassName}>
           <option value="">Type (tous)</option>
           {Object.keys(types).map((k) => (
             <option key={k} value={k}>{types[k as keyof typeof types].nom}</option>
           ))}
         </select>
 
-        <select
-          value={String(sortKey) ?? 'updatedAt'}
-          onChange={(e) => setSort(e.target.value as keyof Structure, sortDir)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
-        >
-          <option value="updatedAt">Tri: Dernière modification</option>
-          <option value="nom">Tri: Nom</option>
-          <option value="type">Tri: Type</option>
-          <option value="adresse">Tri: Adresse</option>
-          <option value="statut">Tri: Statut</option>
+        <select value={String(sortKey) ?? 'updatedAt'} onChange={(e) => setSort(e.target.value as keyof Structure, sortDir)} className={selectClassName}>
+          <option value="updatedAt">Tri: derniere modification</option>
+          <option value="nom">Tri: nom</option>
+          <option value="type">Tri: type</option>
+          <option value="adresse">Tri: adresse</option>
+          <option value="statut">Tri: statut</option>
         </select>
 
-        <select
-          value={sortDir}
-          onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Structure, e.target.value as 'asc' | 'desc')}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white"
-        >
-          <option value="desc">Ordre: décroissant</option>
+        <select value={sortDir} onChange={(e) => setSort((sortKey ?? 'updatedAt') as keyof Structure, e.target.value as 'asc' | 'desc')} className={selectClassName}>
+          <option value="desc">Ordre: decroissant</option>
           <option value="asc">Ordre: croissant</option>
         </select>
 
-        {/* Reset */}
         {(search || Object.values(filters).some(Boolean)) && (
-          <button
-            type="button"
-            onClick={() => { setSearch(''); setFilter('statut', ''); setFilter('type', '') }}
-            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1"
-          >
-            ✕ Reset
+          <button type="button" onClick={() => { setSearch(''); setFilter('statut', ''); setFilter('type', '') }} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">
+            x Reset
           </button>
         )}
       </div>
 
-      {/* ── TABLEAU ── */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
             <tr>
-              {/* Case à cocher "tout sélectionner" */}
-              <th className="pl-4 pr-2 py-3 w-10">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={() => toggleSelectAll(allFilteredIds)}
-                  className="w-4 h-4 rounded border-gray-300"
-                  aria-label="Sélectionner tout"
-                />
-              </th>
-
-              {/* Colonnes triables */}
-              {[
-                { key: 'nom', label: 'Nom' },
-                { key: 'type', label: 'Type' },
-                { key: 'adresse', label: 'Adresse' },
-                { key: 'statut', label: 'Statut' },
-                { key: 'updatedAt', label: 'Modifié' },
-              ].map(({ key, label }) => (
-                <th
-                  key={key}
-                  onClick={() => toggleSort(key as keyof Structure)}
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"
-                >
-                  <span className="flex items-center gap-1">
-                    {label}
-                    <SortIcon active={sortKey === key} dir={sortDir} />
-                  </span>
-                </th>
+              <th className="pl-4 pr-2 py-3 w-10"><input type="checkbox" checked={allSelected} onChange={() => toggleSelectAll(allFilteredIds)} className="w-4 h-4 rounded border-gray-300" /></th>
+              {[{ key: 'nom', label: 'Nom' }, { key: 'type', label: 'Type' }, { key: 'adresse', label: 'Adresse' }, { key: 'statut', label: 'Statut' }, { key: 'updatedAt', label: 'Modifie' }].map(({ key, label }) => (
+                <th key={key} onClick={() => toggleSort(key as keyof Structure)} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100"><span className="flex items-center gap-1">{label}<SortIcon active={sortKey === key} dir={sortDir} /></span></th>
               ))}
-
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-
           <tbody className="divide-y divide-gray-50">
-            {paginated.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">
-                  Aucune structure ne correspond à vos critères.
-                </td>
-              </tr>
-            )}
-
+            {paginated.length === 0 && (<tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">Aucune structure ne correspond a vos criteres.</td></tr>)}
             {paginated.map((s) => (
-              <tr
-                key={s.id}
-                className={`transition-colors ${selectedIds.has(s.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-              >
-                {/* Checkbox */}
-                <td className="pl-4 pr-2 py-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(s.id)}
-                    onChange={() => toggleSelect(s.id)}
-                    className="w-4 h-4 rounded border-gray-300"
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Sélectionner ${s.nom}`}
-                  />
-                </td>
-
-                {/* Nom */}
-                <td className="px-4 py-3">
-                  <p className="font-medium text-gray-900 text-sm">{s.nom}</p>
-                  {s.organisation && <p className="text-xs text-gray-400">{s.organisation}</p>}
-                </td>
-
-                {/* Type */}
-                <td className="px-4 py-3 text-sm text-gray-600 max-w-32">
-                  <span className="truncate block">{s.type}</span>
-                </td>
-
-                {/* Adresse */}
-                <td className="px-4 py-3 text-sm text-gray-500 max-w-48">
-                  <span className="truncate block">{s.adresse}</span>
-                </td>
-
-                {/* Statut */}
-                <td className="px-4 py-3">
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    s.statut === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}
-                  >
-                    {s.statut === 'published' ? 'Publié' : 'Brouillon'}
-                  </span>
-                </td>
-
-                {/* Date modif */}
-                <td className="px-4 py-3 text-xs text-gray-400">
-                  {new Date(s.updatedAt).toLocaleDateString('fr-FR')}
-                </td>
-
-                {/* Menu actions */}
-                <td className="px-4 py-3 text-right">
+              <tr key={s.id} onClick={() => router.push(`/admin/structures/${s.id}/modifier`)} className={`cursor-pointer transition-colors ${selectedIds.has(s.id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(s.id)} onChange={() => toggleSelect(s.id)} className="w-4 h-4 rounded border-gray-300" /></td>
+                <td className="px-4 py-3"><p className="font-medium text-gray-900 text-sm">{s.nom}</p>{s.organisation && <p className="text-xs text-gray-400">{s.organisation}</p>}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 max-w-32"><span className="truncate block">{s.type}</span></td>
+                <td className="px-4 py-3 text-sm text-gray-500 max-w-48"><span className="truncate block">{s.adresse}</span></td>
+                <td className="px-4 py-3"><span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${s.statut === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{s.statut === 'published' ? 'Publie' : 'Brouillon'}</span></td>
+                <td className="px-4 py-3 text-xs text-gray-400">{new Date(s.updatedAt).toLocaleDateString('fr-FR')}</td>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <ActionMenu actions={[
-                    {
-                      label: 'Modifier',
-                      icon: '📝',
-                      onClick: () => router.push(`/admin/structures/${s.id}/modifier`),
-                    },
-                    {
-                      label: s.statut === 'published' ? 'Dépublier' : 'Publier',
-                      icon: s.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />,
-                      onClick: () => handlePublishOne(s.id),
-                    },
-                    {
-                      label: 'Supprimer',
-                      icon: <TrashIcon className="w-4 h-4" />,
-                      variant: 'danger',
-                      divider: true,
-                      onClick: () => {
-                        // On utilise DeleteConfirmModal via un état local
-                        // Pour simplifier on utilise confirm() ici
-                        if (window.confirm(`Supprimer "${s.nom}" définitivement ?`)) {
-                          handleDeleteOne(s.id)
-                        }
-                      },
-                    },
+                    { label: 'Modifier', icon: 'M', onClick: () => router.push(`/admin/structures/${s.id}/modifier`) },
+                    { label: s.statut === 'published' ? 'Depublier' : 'Publier', icon: s.statut === 'published' ? <CheckIcon className="w-4 h-4" /> : <CircleIcon className="w-4 h-4" />, onClick: () => handlePublishOne(s.id) },
+                    { label: 'Supprimer', icon: <TrashIcon className="w-4 h-4" />, variant: 'danger', divider: true, onClick: () => setDeleteTarget(s.id) },
                   ]}
                   />
                 </td>
@@ -347,54 +209,35 @@ export default function AdminStructuresPage() {
           </tbody>
         </table>
       </div>
+
       <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>Afficher</span>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            className="border border-gray-200 rounded-lg px-2 py-1 bg-white text-sm"
-          >
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="border border-gray-200 rounded-lg px-2 py-1 bg-white text-sm">
             <option value={25}>25</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
           </select>
-          <span>éléments par page</span>
+          <span>elements par page</span>
         </div>
-
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            Précédent
-          </button>
-
-          <span className="text-sm text-gray-500">
-            Page {page} sur {totalPages}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-          >
-            Suivant
-          </button>
+          <button type="button" onClick={() => setPage(page - 1)} disabled={page === 1} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Precedent</button>
+          <span className="text-sm text-gray-500">Page {page} sur {totalPages}</span>
+          <button type="button" onClick={() => setPage(page + 1)} disabled={page === totalPages} className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Suivant</button>
         </div>
       </div>
 
-      {/* Barre d'actions en masse */}
-      <BulkBar
-        count={selectedIds.size}
-        onDelete={handleBulkDelete}
-        onPublish={handleBulkPublish}
-        onClear={clearSelection}
-        isProcessing={isProcessing}
-      />
+      <BulkBar count={selectedIds.size} onDelete={handleBulkDelete} onPublish={handleBulkPublish} onClear={clearSelection} isProcessing={isProcessing} />
+
+      {deleteTarget && (
+        <DeleteConfirmModal
+          nom={data.find((s) => s.id === deleteTarget)?.nom ?? ''}
+          onConfirm={async () => {
+            await handleDeleteOne(deleteTarget)
+            setDeleteTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }
