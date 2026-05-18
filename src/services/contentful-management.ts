@@ -1092,17 +1092,24 @@ export const setFicheIllustration = async (
 }
 
 // Crée une fiche avec des valeurs minimales obligatoires
-export const createFicheVide = async (): Promise<{ id: string }> => {
+export const createFicheVide = async (titre: string): Promise<{ id: string }> => {
   const environment = await getEnvironment()
+
+  const slug = titre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || `fiche-${Date.now()}`
 
   const entry = await environment.createEntry('fiche', {
     fields: {
-      titre: { fr: 'Nouvelle fiche (brouillon)' },
-      slug: { fr: `nouvelle-fiche-${Date.now()}` },
+      titre: { fr: titre },
+      slug: { fr: slug },
       categorie: { fr: 'sante' },
-      // description obligatoire dans Contentful
       description: { fr: 'À compléter...' },
-      // resume obligatoire
       resume: {
         fr: {
           nodeType: 'document',
@@ -1114,7 +1121,6 @@ export const createFicheVide = async (): Promise<{ id: string }> => {
           }],
         },
       },
-      // contenu obligatoire
       contenu: {
         fr: {
           nodeType: 'document',
