@@ -10,8 +10,11 @@ import {
   getStructureById,
   updateStructureInContentful,
   publishStructure,
+  deleteStructure,
 } from '@/services/contentful-management'
 import { StructureEditorView } from './StructureEditorView'
+import { useRouter } from 'next/navigation'
+import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal'
 
 export default function StructureEditorPage() {
   const params = useParams()
@@ -21,6 +24,9 @@ export default function StructureEditorPage() {
   const [initialValues, setInitialValues] = useState<Record<string, any>>({})
   const [isPublished, setIsPublished] = useState(false)
   const [nom, setNom] = useState('')
+
+  const router = useRouter()
+  const [showDelete, setShowDelete] = useState(false)
 
   useEffect(() => {
     getStructureById(id).then((s) => {
@@ -76,6 +82,28 @@ export default function StructureEditorPage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         <EditorToolbar titre={nom} backHref="/admin/structures" />
+        <button
+          type="button"
+          onClick={() => setShowDelete(true)}
+          className="fixed top-3 right-4 z-[110] text-xs text-red-500
+            hover:text-red-700 border border-red-200 px-3 py-1.5
+            rounded-lg hover:bg-red-50 transition-colors"
+        >
+          🗑 Supprimer
+        </button>
+
+        {showDelete && (
+          <DeleteConfirmModal
+            nom={nom}
+            hideTrigger={true}
+            defaultOpen={true}
+            onConfirm={async () => {
+              await deleteStructure(id)
+              router.push('/admin/structures')
+            }}
+            onCancel={() => setShowDelete(false)}
+          />
+        )}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <div style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
             <StructureEditorView />
