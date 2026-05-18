@@ -60,7 +60,7 @@ export function RichTextEditor({
           draggable: 'true',
         },
       }),
-      LinkExtension.configure({ openOnClick: false }),
+      LinkExtension.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder }),
     ],
@@ -91,12 +91,14 @@ export function RichTextEditor({
   if (!editor) return
 
   if (asset.contentType.startsWith('image/')) {
-    editor.chain().focus().setImage({
-      src: asset.url,
-      alt: asset.titre || asset.fileName,
-      // @ts-expect-error data-* accepte par le DOM
-      'data-asset-id': asset.id,
-    }).createParagraphNear().run()
+   editor.chain().focus().insertContent(
+    `<img
+      src="${asset.url}"
+      alt="${asset.titre}"
+      data-asset-id="${asset.id}"
+      class="rounded-sm max-w-full h-auto block"
+    />`
+  ).run()
   } else {
     editor.chain().focus().insertContent({
       type: 'text',
@@ -149,6 +151,7 @@ export function RichTextEditor({
   // UI
   return (
     <div className="border border-gray-200 rounded-lg bg-white flex flex-col max-h-[70vh] overflow-hidden">
+      <style>{editorAssetStyles}</style>
       <div className="sticky top-0 z-20 bg-[#fafafa] shrink-0">
         <RichTextToolbar
           editor={editor}
