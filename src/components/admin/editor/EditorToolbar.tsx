@@ -1,10 +1,12 @@
-// src/components/admin/editor/EditorToolbar.tsx
-// Barre du haut fixe : nom de la ressource, statut, boutons sauvegarder/publier.
-
 'use client'
 
 import Link from 'next/link'
 import { useEditor } from './EditorContext'
+import { DeleteConfirmModal } from '../DeleteConfirmModal'
+import { useState } from 'react'
+import { deleteFiche } from '@/services/contentful-management'
+import { useRouter } from 'next/navigation'
+import { DiffViewer } from './DiffViewer'
 
 type Props = {
   titre: string
@@ -12,7 +14,9 @@ type Props = {
 }
 
 export function EditorToolbar({ titre, backHref }: Props) {
-  const { isDirty, isSaving, isPublished, save, publish } = useEditor()
+  const { isDirty, isSaving, isPublished, save, publish, ficheId, values, savedSnapshot, showDiff, setShowDiff, hideDiff } = useEditor()
+  const [showDelete, setShowDelete] = useState(false)
+  const router = useRouter()
 
   return (
     <div
@@ -88,7 +92,10 @@ export function EditorToolbar({ titre, backHref }: Props) {
       {/* Bouton Sauvegarder */}
       <button
         type="button"
-        onClick={save}
+        onClick={async () => {
+          await save()
+          setShowDiff(true)
+        }}
         disabled={isSaving || !isDirty}
         style={{
           fontSize: 12,
@@ -104,6 +111,14 @@ export function EditorToolbar({ titre, backHref }: Props) {
       >
         {isSaving ? 'Sauvegarde...' : 'Sauvegarder'}
       </button>
+
+      {showDiff && savedSnapshot && (
+        <DiffViewer
+          snapshot={savedSnapshot}
+          current={values}
+          onClose={hideDiff}
+        />
+      )}
 
       {/* Bouton Publier */}
       <button
@@ -126,6 +141,29 @@ export function EditorToolbar({ titre, backHref }: Props) {
       >
         {isPublished ? 'Dépublier' : 'Publier sur le site'}
       </button>
+      {ficheId && (
+        <button
+          type="button"
+          onClick={() => setShowDelete(true)}
+          className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50
+            px-3 py-1.5 rounded-lg border border-red-200 transition-colors"
+        >
+          🗑 Supprimer
+        </button>
+      )}
+
+      {showDelete && (
+      <DeleteConfirmModal
+        nom={titre}
+        hideTrigger={true}
+        defaultOpen={true}
+        onConfirm={async () => {
+          await deleteFiche(ficheId!)
+          router.push('/admin/fiches')
+        }}
+        onCancel={() => setShowDelete(false)}
+      />
+    )}
     </div>
   )
 }
