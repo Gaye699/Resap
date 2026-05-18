@@ -15,8 +15,12 @@ type Props = {
   onClose: () => void
 }
 
+const PAGE_SIZE = 24
+
 export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props) {
   const [assets, setAssets] = useState<Asset[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [search, setSearch] = useState('')
@@ -24,11 +28,12 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
   const [filterType, setFilterType] = useState<FilterType>('all')
   const [sortBy, setSortBy] = useState<SortBy>('name')
 
-  const load = useCallback(async (q?: string) => {
+  const load = useCallback(async (q?: string, p = 0) => {
     setLoading(true)
     try {
-      const data = await listAssets(q)
-      setAssets(data)
+      const data = await listAssets(q, p * PAGE_SIZE, PAGE_SIZE)
+      setAssets(data.items)
+      setTotal(data.total)
     } finally {
       setLoading(false)
     }
@@ -36,13 +41,16 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
 
   // Chargement automatique dès l'ouverture de l'onglet existants
   useEffect(() => {
-    if (tab === 'existing') load()
-  }, [tab, load])
+    if (tab === 'existing') load(search || undefined, page)
+  }, [tab, page, load])
 
   const handleSearch = (v: string) => {
     setSearch(v)
-    if (v.length > 1 || v === '') load(v || undefined)
+    setPage(0)
+    load(v || undefined, 0)
   }
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -57,12 +65,6 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
       setUploading(false)
     }
     e.target.value = ''
-  }
-
-  const getTypeLabel = (contentType: string) => {
-    if (contentType.startsWith('image/')) return 'image'
-    if (contentType.includes('pdf')) return 'pdf'
-    return 'other'
   }
 
   const filtered = assets
@@ -102,7 +104,7 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
               {mode === 'illustration' ? 'Choisir une illustration' : 'Insérer un asset'}
             </h2>
             {!loading && (
-              <p className="text-xs text-gray-400 mt-0.5">{assets.length} asset{assets.length > 1 ? 's' : ''} dans Contentful</p>
+              <p className="text-xs text-gray-400 mt-0.5">{total} asset{total > 1 ? 's' : ''} au total</p>
             )}
           </div>
           <button type="button" onClick={onClose} className="bg-transparent border-none text-lg cursor-pointer text-gray-400 hover:text-gray-600 transition-colors">✕</button>
@@ -120,7 +122,8 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
               onClick={onClick}
               className={`px-4 py-2.5 text-[13px] border-none cursor-pointer transition-all border-b-2
                 ${tab === key ? 'bg-blue-50 text-blue-600 border-blue-600 font-medium' : 'bg-transparent text-gray-500 border-transparent hover:text-gray-700'}`}
-            >{label}
+            >
+              {label}
             </button>
           ))}
         </div>
@@ -158,6 +161,7 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                        `📎 Autres (${counts.other})`}
                     </button>
                   ))}
+
                   {/* Tri */}
                   <select
                     value={sortBy}
@@ -170,45 +174,95 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                 </div>
               </div>
 
-              <div className="relative flex-1 overflow-y-auto p-3">
+              {/* Zone unique de la grille — hauteur fixe pour éviter le saut graphique */}
+              <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: 320 }}>
+
+                {/* 1. État : Chargement en cours */}
                 {loading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/85 backdrop-blur-[1px]">
-                    <p className="text-center text-[13px] text-gray-400">Chargement des assets...</p>
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <div key={i} className="border-2 border-gray-100 rounded-lg overflow-hidden animate-pulse">
+                        <div className="h-[90px] bg-gray-100" />
+                        <div className="p-2 space-y-1">
+                          <div className="h-2.5 bg-gray-100 rounded w-3/4" />
+                          <div className="h-2 bg-gray-100 rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
+                {/* 2. État : Aucun résultat après chargement */}
                 {!loading && filtered.length === 0 && (
-                  <p className="p-5 text-center text-[13px] text-gray-400">Aucun asset trouvé.</p>
+                  <div className="flex items-center justify-center h-full" style={{ minHeight: 280 }}>
+                    <p className="text-center text-[13px] text-gray-400">Aucun asset trouvé.</p>
+                  </div>
                 )}
 
-                <div className={`grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5 ${loading ? 'pointer-events-none opacity-40' : ''}`}>
-                  {filtered.map((asset) => (
+                {/* 3. État : Liste des résultats disponibles */}
+                {!loading && filtered.length > 0 && (
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
+                    {filtered.map((asset) => (
+                      <button
+                        type="button"
+                        key={asset.id}
+                        onClick={() => onSelect(asset)}
+                        className={`overflow-hidden rounded-lg border-2 bg-white p-0 text-left transition-colors hover:border-blue-500
+                          ${currentAssetUrl === asset.url ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}
+                          cursor-pointer`}
+                      >
+                        <div className="flex h-[90px] items-center justify-center overflow-hidden bg-gray-50">
+                          {asset.contentType.startsWith('image/') && asset.url ? (
+                            <img src={asset.url} alt={asset.titre} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-3xl">
+                              {asset.contentType.includes('pdf') ? '📄' : '📎'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-2">
+                          <p className="m-0 truncate text-[11px] font-medium text-gray-700">
+                            {asset.titre || asset.fileName}
+                          </p>
+                          <p className="mb-0 mt-0.5 text-[10px] text-gray-400">
+                            {asset.contentType.split('/')[1]?.toUpperCase()}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+                  <span className="text-xs text-gray-400">
+                    {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} sur {total} assets
+                  </span>
+                  <div className="flex gap-1">
                     <button
                       type="button"
-                      key={asset.id}
-                      onClick={() => onSelect(asset)}
-                      disabled={loading}
-                      className={`overflow-hidden rounded-lg border-2 bg-white p-0 text-left transition-colors hover:border-blue-500
-                        ${currentAssetUrl === asset.url ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'}
-                        ${loading ? 'cursor-wait' : 'cursor-pointer'}`}
+                      disabled={page === 0}
+                      onClick={() => setPage(p => p - 1)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
                     >
-                      <div className="flex h-[90px] items-center justify-center overflow-hidden bg-gray-50">
-                        {asset.contentType.startsWith('image/') && asset.url ? (
-                          <img src={asset.url} alt={asset.titre} className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="text-3xl">
-                            {asset.contentType.includes('pdf') ? '📄' : '📎'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-2">
-                        <p className="m-0 truncate text-[11px] font-medium text-gray-700">{asset.titre || asset.fileName}</p>
-                        <p className="mb-0 mt-0.5 text-[10px] text-gray-400">{asset.contentType.split('/')[1]?.toUpperCase()}</p>
-                      </div>
+                      ← Précédent
                     </button>
-                  ))}
+                    <span className="px-3 py-1.5 text-xs text-gray-500">
+                      {page + 1} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= totalPages - 1}
+                      onClick={() => setPage(p => p + 1)}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
+                    >
+                      Suivant →
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
@@ -221,7 +275,8 @@ export function AssetPicker({ mode, currentAssetUrl, onSelect, onClose }: Props)
                 </p>
                 <p className="text-[12px] text-gray-400 mb-5">Uploadé dans Contentful Media et sélectionné automatiquement.</p>
                 <label className={`inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium transition-all
-                  ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-blue-700'}`}>
+                  ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-blue-700'}`}
+                >
                   {uploading ? '⏳ Upload en cours...' : '📁 Choisir un fichier'}
                   <input
                     type="file"
